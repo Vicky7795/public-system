@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ShieldCheck, Cpu, BarChart3, Clock, ArrowRight, UserCircle, Briefcase } from 'lucide-react';
 import api from '../utils/api';
+import emblemWatermark from '../assets/emblem-watermark.png';
 
 const LandingPage = () => {
     const [stats, setStats] = useState({
@@ -31,7 +32,7 @@ const LandingPage = () => {
                 <div
                     className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full opacity-[0.07] pointer-events-none mix-blend-overlay"
                     style={{
-                        backgroundImage: `url('/src/assets/emblem-watermark.png')`,
+                        backgroundImage: `url(${emblemWatermark})`,
                         backgroundPosition: 'center',
                         backgroundRepeat: 'no-repeat',
                         backgroundSize: 'contain',
