@@ -1,0 +1,22 @@
+# Node dependencies
+node_modules/
+
+# Python virtual environment
+.venv/
+__pycache__/
+*.pyc
+
+# Environment variables (SECURITY!)
+.env
+.env.local
+
+# Build outputs
+client/dist/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Misc
+.DS_Store
+Thumbs.db

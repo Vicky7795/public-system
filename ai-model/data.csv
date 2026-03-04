@@ -1,0 +1,131 @@
+text,category,priority
+"Street light not working in sector 4",Electricity,Medium
+"Frequent power cuts in the evening",Electricity,Low
+"Transformer sparking and making loud noise",Electricity,High
+"Loose electric wires hanging low on the street",Electricity,High
+"Frequent voltage fluctuations damaging appliances",Electricity,Medium
+"Electricity bill is incorrectly high this month",Electricity,Low
+"Power outage since last 6 hours without notice",Electricity,High
+"Trees falling on electric lines due to storm",Electricity,High
+"Short circuit in the feeder pillar box",Electricity,High
+"No street lights in the internal colony lanes",Electricity,Medium
+"Electric meter showing wrong readings",Electricity,Low
+"Overhead power cables dangerously low",Electricity,High
+"Water leakage from main pipe near water tank",Water Department,High
+"Low water pressure in our colony",Water Department,Low
+"No water supply for the past two days",Water Department,High
+"Contaminated muddy water coming from taps",Water Department,High
+"Main water pipeline burst and flooding road",Water Department,High
+"Water meter is broken and leaking",Water Department,Medium
+"Request for new water connection in block C",Water Department,Low
+"Water tanker required due to borewell failure",Water Department,High
+"Water supply contaminated with sewage",Water Department,High
+"Chlorine smell too strong in tap water",Water Department,Medium
+"Water supply timings not followed",Water Department,Low
+"Huge pothole on the main road to bus stand",PWD,High
+"Road surface completely peeled off near market",PWD,Medium
+"Illegal construction blocking the side pavement",PWD,Medium
+"Large cracks in the flyover pillar near station",PWD,High
+"Open manhole on the walking path",PWD,High
+"Street signs are damaged and unreadable",PWD,Low
+"Speed breakers have no markings",PWD,Medium
+"Road divider broken and causing accidents",PWD,High
+"Bridge railing missing near river crossing",PWD,High
+"Drainage cover missing on main road",PWD,High
+"Footpath encroached by vendors",PWD,Medium
+"Road not built in new colony despite promises",PWD,Low
+"Garbage not collected for three days",Municipal,Medium
+"Sewer line blocked and overflowing",Municipal,High
+"Foul smell from open garbage dump",Municipal,Medium
+"Public toilet in the complex is unusable",Municipal,Medium
+"Dust pollution from nearby construction site",Municipal,Medium
+"Garbage truck has not visited for a week",Municipal,Medium
+"Illegal waste dumping behind the school",Municipal,Medium
+"Stray dogs chasing bikers in the night",Municipal,Medium
+"Dead animal lying on the road for two days",Municipal,High
+"Public park is filled with litter and plastic",Municipal,Low
+"Drainage water entering houses after rain",Municipal,High
+"Mosquito breeding in stagnant water in park",Municipal,Medium
+"Encroachment on government land by shops",Municipal,Medium
+"Internet cable wires messy and hanging",Municipal,Low
+"Unauthorized billboard blocking road visibility",Municipal,Medium
+"Dengue or malaria outbreak in our area",Health Department,High
+"Food poisoning from local restaurant",Health Department,High
+"Unsanitary conditions in government hospital",Health Department,High
+"Lack of medicines at primary health centre",Health Department,High
+"Doctor not available at the community clinic",Health Department,Medium
+"Dead rodents near food stalls in market",Health Department,High
+"Sewage water contaminating drinking well",Health Department,High
+"Child vaccination camp not organized",Health Department,Medium
+"Hospital charging more than fixed rates",Health Department,Medium
+"No ambulance available in emergency",Health Department,High
+"Old age pension not credited for 3 months",Education Department,High
+"School building roof is damaged and leaking",Education Department,High
+"No teacher appointed in primary school for months",Education Department,High
+"Midday meal not provided to school children",Education Department,Medium
+"Scholarship not received by eligible students",Education Department,Medium
+"School toilet is broken and unusable",Education Department,Medium
+"Library books not updated in government school",Education Department,Low
+"Children sitting on floor due to no benches",Education Department,Medium
+"Female teacher absent regularly",Education Department,Medium
+"No science lab equipment in government school",Education Department,Low
+"Crop damaged due to waterlogging in field",Agriculture Department,High
+"Subsidy for seeds not received by farmers",Agriculture Department,High
+"Fertilizer shortage reported by local farmers",Agriculture Department,Medium
+"Pest attack on mango plantation in village",Agriculture Department,High
+"Soil testing facility not available",Agriculture Department,Low
+"Farmer compensation not paid after drought",Agriculture Department,High
+"Irrigation canal water not reaching fields",Agriculture Department,Medium
+"Animal disease spreading in farm livestock",Agriculture Department,High
+"Cold storage facility damaged and not repaired",Agriculture Department,Medium
+"Agricultural loan not processed in time",Agriculture Department,Medium
+"Traffic signal malfunctioning at the junction",Transport Department,Medium
+"Illegal parking causing heavy traffic jams",Transport Department,Medium
+"Bus route cancelled without announcement",Transport Department,Medium
+"Auto-rickshaw overcharging passengers",Transport Department,Medium
+"No bus service to rural area after 8pm",Transport Department,High
+"Road accident hotspot not fixed",Transport Department,High
+"CCTV cameras not working at busy junction",Transport Department,Medium
+"Speed limit violation by trucks in school zone",Transport Department,High
+"No zebra crossing near school gate",Transport Department,Medium
+"City bus in very poor condition",Transport Department,Medium
+"Widow pension not received for months",Social Welfare,High
+"Disabled person benefits denied without reason",Social Welfare,High
+"Old age home facilities are very poor",Social Welfare,Medium
+"Ration shop not distributing food properly",Social Welfare,High
+"Child labour seen in nearby factory",Social Welfare,High
+"BPL card wrongly given to rich family",Social Welfare,Medium
+"Domestic violence case not addressed",Social Welfare,High
+"Orphan child welfare not looked after",Social Welfare,Medium
+"Social welfare scheme benefits not reaching poor",Social Welfare,High
+"MNREGA workers not paid for completed work",Social Welfare,High
+"Chain snatching in market area",Police,High
+"Alcohol being sold illegally near school",Police,High
+"Fight near locality creating disturbance",Police,Medium
+"Drug peddling noticed at bus stand",Police,High
+"Theft at residence not registered as FIR",Police,High
+"Eve teasing and harassment not stopped",Police,High
+"Mob gathering causing law and order issue",Police,High
+"Gambling den operating openly in locality",Police,Medium
+"Missing person complaint not taken seriously",Police,High
+"Police not responding to emergency calls",Police,High
+"Property tax record not updated after payment",Revenue Department,Medium
+"Land record shows wrong owner name",Revenue Department,High
+"Mutation of property not done after purchase",Revenue Department,Medium
+"Encroachment on government land not removed",Revenue Department,High
+"Delay in birth certificate issuance",Revenue Department,Low
+"Ration card not made despite application",Revenue Department,Medium
+"Caste certificate rejected without valid reason",Revenue Department,Medium
+"Death certificate delayed for months",Revenue Department,Low
+"Government office remains closed during hours",Revenue Department,Medium
+"Clerk demanding extra fee for document verify",Revenue Department,High
+"Illegal tree cutting in forest area",Forest Department,High
+"Wildlife poaching reported near reserve",Forest Department,High
+"Forest fire not controlled near village",Forest Department,High
+"Mining happening illegally in forest zone",Forest Department,High
+"Encroachment in forest land for agriculture",Forest Department,Medium
+"Sand mining from river destroying ecology",Forest Department,High
+"Stray elephants entering village at night",Forest Department,High
+"Rare bird nest destroyed by construction",Forest Department,Medium
+"Forest department not planting trees as planned",Forest Department,Low
+"Deforestation near water reservoir",Forest Department,High

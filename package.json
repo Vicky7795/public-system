@@ -1,0 +1,13 @@
+{
+    "name": "ai-public-grievance-system",
+    "version": "1.0.0",
+    "description": "Root package to manage all services",
+    "scripts": {
+        "start": "python start.py",
+        "install-all": "npm install --prefix client && npm install --prefix server && pip install -r ai-model/requirements.txt",
+        "dev:server": "npm run dev --prefix server",
+        "dev:client": "npm run dev --prefix client",
+        "dev:ai": "cd ai-model && ..\\.venv\\Scripts\\python.exe app.py"
+    },
+    "dependencies": {}
+}
