@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-    baseURL: 'https://public-system-1.onrender.com/api',
+    baseURL: 'https://public-grievance-backend.onrender.com/api',
 });
 
 api.interceptors.request.use((config) => {
