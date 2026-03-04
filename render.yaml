@@ -21,10 +21,7 @@ services:
       - key: MONGODB_URI
         sync: false # This will ask you for the link once
       - key: AI_SERVICE_URL
-        fromService:
-          name: public-grievance-ai
-          type: web
-          property: host
+        value: http://public-grievance-ai
       - key: JWT_SECRET
         generateValue: true # Generates a random one-time key for you!
 
