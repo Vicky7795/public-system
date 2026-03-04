@@ -19,7 +19,7 @@ services:
     startCommand: node index.js
     envVars:
       - key: MONGODB_URI
-        sync: false # This will ask you for the link once
+        value: mongodb+srv://nagarevivek206_db_user:7sEHEKssevVynHVB@cluster0.sqyv5qq.mongodb.net/?appName=Cluster0
       - key: AI_SERVICE_URL
         value: http://public-grievance-ai
       - key: JWT_SECRET
