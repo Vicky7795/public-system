@@ -66,19 +66,45 @@ const auth = (req, res, next) => {
 
 // Keyword mapping: AI category -> keywords found in DB department names
 const CATEGORY_KEYWORDS = {
-    'Electricity': ['electr', 'power', 'voltage', 'light', 'energy', 'transformer', 'cut', 'bill'],
-    'Water Department': ['water', 'leak', 'pipeline', 'tanker', 'sewage'],
-    'PWD': ['pwd', 'public works', 'road', 'infra', 'pothole', 'bridge', 'pavement', 'highway'],
-    'Municipal': ['municipal', 'garbage', 'sanit', 'waste', 'sewer', 'drain', 'clean', 'street light'],
-    'Health Department': ['health', 'hospital', 'clinic', 'medical', 'disease', 'dengue', 'vaccine', 'medicine'],
-    'Education Department': ['education', 'school', 'teacher', 'student', 'scholarship', 'midday', 'exam'],
-    'Agriculture Department': ['agriculture', 'agri', 'farm', 'crop', 'farmer', 'irrigation', 'pest', 'fertilizer'],
-    'Transport Department': ['transport', 'traffic', 'bus', 'auto', 'vehicle', 'road accident', 'license'],
-    'Social Welfare': ['welfare', 'social', 'pension', 'ration', 'bpl', 'disabled', 'mnrega', 'aadhaar'],
-    'Police': ['police', 'crime', 'theft', 'robbery', 'law', 'order', 'fir', 'drug', 'harassment', 'safety'],
-    'Revenue Department': ['revenue', 'property tax', 'land record', 'certificate', 'mutation', 'caste', 'ration card', 'income', 'patwari', 'tehsil'],
-    'Forest Department': ['forest', 'tree', 'wildlife', 'poach', 'mining', 'deforest', 'ecology', 'timber'],
+    'Electricity': ['electr', 'power', 'voltage', 'light', 'energy', 'transformer', 'cut', 'bill', 'street light', 'pole', 'current', 'wire', 'shock', 'short circuit', 'spark'],
+    'Water Department': ['water', 'leak', 'pipeline', 'tanker', 'sewage', 'pipe', 'tap', 'drain', 'pressure', 'clog', 'burst', 'overflow', 'plumb'],
+    'PWD': ['pwd', 'public works', 'road', 'infra', 'pothole', 'bridge', 'pavement', 'highway', 'path', 'street', 'asphalt', 'tar', 'concrete'],
+    'Municipal': ['municipal', 'garbage', 'sanit', 'waste', 'sewer', 'drain', 'clean', 'trash', 'dump', 'scaveng', 'smell', 'mosquito', 'litter', 'plastic'],
+    'Health Department': ['health', 'hospital', 'clinic', 'medical', 'disease', 'dengue', 'vaccine', 'medicine', 'doctor', 'nurse', 'ambulance', 'emergency', 'outbreak'],
+    'Education Department': ['education', 'school', 'teacher', 'student', 'scholarship', 'midday', 'exam', 'bench', 'class', 'college', 'uniform'],
+    'Agriculture Department': ['agriculture', 'agri', 'farm', 'crop', 'farmer', 'irrigation', 'pest', 'fertilizer', 'subsidy', 'harvest', 'soil', 'canal', 'livestock'],
+    'Transport Department': ['transport', 'traffic', 'bus', 'auto', 'vehicle', 'road accident', 'license', 'signal', 'crossing', 'parking', 'rickshaw'],
+    'Social Welfare': ['welfare', 'social', 'pension', 'ration', 'bpl', 'disabled', 'mnrega', 'aadhaar', 'scheme', 'poverty', 'orphan'],
+    'Police': ['police', 'crime', 'theft', 'robbery', 'law', 'order', 'fir', 'drug', 'harassment', 'safety', 'fight', 'steal', 'threat', 'emergency'],
+    'Revenue Department': ['revenue', 'property tax', 'land record', 'certificate', 'mutation', 'caste', 'ration card', 'income', 'patwari', 'tehsil', 'tax'],
+    'Forest Department': ['forest', 'tree', 'wildlife', 'poach', 'mining', 'deforest', 'ecology', 'timber', 'nature', 'animal', 'reserve'],
     'General': ['general', 'misc', 'other']
+};
+
+/**
+ * Local keyword-based classifier as a fallback for the AI service.
+ * Returns the most likely category based on keyword density.
+ */
+const classifyTextByKeywords = (text) => {
+    let bestCategory = 'General';
+    let maxMatches = 0;
+    const lowerText = text.toLowerCase();
+
+    for (const [category, keywords] of Object.entries(CATEGORY_KEYWORDS)) {
+        if (category === 'General') continue;
+        let score = 0;
+        for (const kw of keywords) {
+            // Count occurrences or just existence? Existence is safer for short texts.
+            if (lowerText.includes(kw.toLowerCase())) {
+                score++;
+            }
+        }
+        if (score > maxMatches) {
+            maxMatches = score;
+            bestCategory = category;
+        }
+    }
+    return bestCategory;
 };
 
 // Smart department lookup: exact match first, then keyword fallback
@@ -210,6 +236,16 @@ router.post('/', auth, async (req, res) => {
             console.error("AI service error (non-fatal):", aiErr.message);
         }
 
+        // 1b. Local Classification Fallback
+        if (!category || category === "General") {
+            const combinedText = `${title} ${description}`;
+            const fallbackCategory = classifyTextByKeywords(combinedText);
+            if (fallbackCategory !== "General") {
+                category = fallbackCategory;
+                console.log("Local Fallback Classification Success:", { category });
+            }
+        }
+
         // 2. Smart Department Resolution
         const Department = require('../models/Department');
         const User = require('../models/User');
@@ -254,7 +290,12 @@ router.post('/', auth, async (req, res) => {
         });
         await newComplaint.save();
         console.log(`Grievance Saved: ${newComplaint.ticketId} | Cat: ${category} | Dept: ${department?.departmentName || 'None'} | Officer: ${assignedOfficerId ? 'Assigned' : 'Pool'}`);
-        res.json(newComplaint);
+
+        const responseData = newComplaint.toObject();
+        if (department) {
+            responseData.departmentName = department.departmentName;
+        }
+        res.json(responseData);
     } catch (err) {
         console.error("Grievance Creation FAILED:", err);
         res.status(500).json({ message: err.message });

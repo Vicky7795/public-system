@@ -164,6 +164,9 @@ const SubmitComplaint = () => {
                 <div className="bg-slate-50 p-6 rounded-xl mb-8 text-left space-y-3">
                     <p><strong>Ticket ID:</strong> #{successData.ticketId || successData._id.slice(-6).toUpperCase()}</p>
                     <p><strong>AI Category:</strong> <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-bold">{successData.category}</span></p>
+                    {successData.departmentName && (
+                        <p><strong>Department:</strong> <span className="bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-sm font-bold">{successData.departmentName}</span></p>
+                    )}
                     <p><strong>Priority:</strong> <span className={`px-3 py-1 rounded-full text-sm font-bold ${(successData.priorityLevel || successData.priority) === 'High' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'}`}>{successData.priorityLevel || successData.priority || 'Medium'}</span></p>
                     {successData.location?.address && (
                         <p><strong>📍 Location:</strong> <span className="text-slate-600 text-sm">{successData.location.address}</span></p>

@@ -11,6 +11,8 @@ text,category,priority
 "No street lights in the internal colony lanes",Electricity,Medium
 "Electric meter showing wrong readings",Electricity,Low
 "Overhead power cables dangerously low",Electricity,High
+"Streetlight in front of my house is blinking",Electricity,Low
+"Electric pole is tilted and might fall",Electricity,High
 "Water leakage from main pipe near water tank",Water Department,High
 "Low water pressure in our colony",Water Department,Low
 "No water supply for the past two days",Water Department,High
@@ -22,6 +24,8 @@ text,category,priority
 "Water supply contaminated with sewage",Water Department,High
 "Chlorine smell too strong in tap water",Water Department,Medium
 "Water supply timings not followed",Water Department,Low
+"External water pipe is burst and leaking profusely",Water Department,High
+"Drainage pipe is leaking in the basement",Water Department,Medium
 "Huge pothole on the main road to bus stand",PWD,High
 "Road surface completely peeled off near market",PWD,Medium
 "Illegal construction blocking the side pavement",PWD,Medium
