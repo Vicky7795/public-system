@@ -14,17 +14,20 @@ router.post('/register', async (req, res) => {
         const normalizedEmail = email?.toLowerCase().trim();
         if (!normalizedEmail) return res.status(400).json({ message: 'Email is required' });
 
+        const normalizedPhone = phone?.toString().trim();
+        if (!normalizedPhone) return res.status(400).json({ message: 'Phone number is required' });
+
         // 1. Check if email exists
         let user = await User.findOne({ email: normalizedEmail });
         if (user) return res.status(400).json({ message: 'User already exists with this email' });
 
         // 2. Check if phone exists (to avoid relying solely on catch block for common errors)
-        const existingPhone = await User.findOne({ phone: phone.trim() });
+        const existingPhone = await User.findOne({ phone: normalizedPhone });
         if (existingPhone) return res.status(400).json({ message: 'User already exists with this phone number' });
 
         const userData = {
             name,
-            phone: phone.trim(),
+            phone: normalizedPhone,
             email: normalizedEmail,
             password: bcrypt.hashSync(password, 10),
             role
@@ -120,8 +123,11 @@ router.post('/reset-password', async (req, res) => {
         const { email, phone, newPassword } = req.body;
         const normalizedEmail = email.toLowerCase().trim();
 
+        const normalizedPhone = phone?.toString().trim();
+        if (!normalizedPhone) return res.status(400).json({ message: 'Phone number is required' });
+
         // 1. Verify user exists with this email and phone
-        const user = await User.findOne({ email: normalizedEmail, phone: phone.trim() });
+        const user = await User.findOne({ email: normalizedEmail, phone: normalizedPhone });
         if (!user) {
             return res.status(404).json({ message: 'User not found with these details.' });
         }

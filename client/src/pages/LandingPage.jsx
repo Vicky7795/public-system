@@ -44,27 +44,31 @@ const LandingPage = () => {
                 <div className="container mx-auto text-center relative z-10">
                     <h1 className="text-5xl md:text-7xl font-black mb-8 leading-tight tracking-tight">AI Public Grievance <br /> Redressal System</h1>
 
-                    <div className="grid md:grid-cols-2 gap-6 max-w-2xl mx-auto">
-                        <Link to="/citizen/register" className="group bg-white p-6 rounded-[2rem] hover:shadow-2xl transition-all border border-blue-100 flex items-center gap-6">
-                            <div className="bg-blue-50 p-4 rounded-2xl group-hover:bg-govBlue group-hover:text-white transition-colors">
-                                <UserCircle size={32} className="text-govBlue group-hover:text-white" />
+                    <div className="grid md:grid-cols-2 gap-8 max-w-3xl mx-auto">
+                        <Link to="/citizen/register" className="group bg-white p-8 rounded-[2.5rem] hover:shadow-[0_20px_60px_-15px_rgba(255,255,255,0.3)] transition-all border-2 border-white/20 flex flex-col items-center gap-4 text-center transform hover:-translate-y-2">
+                            <div className="bg-blue-50 p-6 rounded-3xl group-hover:bg-govBlue group-hover:text-white transition-all transform group-hover:scale-110 shadow-inner">
+                                <UserCircle size={48} className="text-govBlue group-hover:text-white" />
                             </div>
-                            <div className="text-left">
-                                <p className="text-xs font-black uppercase text-slate-400 tracking-widest mb-1">For Citizens</p>
-                                <p className="text-slate-800 font-bold text-lg leading-tight">Report & Track <br /> Grievances</p>
+                            <div>
+                                <p className="text-[10px] font-black uppercase text-govBlue tracking-[0.3em] mb-2 opacity-60">Citizen Portal</p>
+                                <p className="text-slate-900 font-extrabold text-2xl tracking-tighter uppercase">Report & Track <br /> Grievances</p>
                             </div>
-                            <ArrowRight size={20} className="text-slate-300 ml-auto group-hover:text-govBlue group-hover:translate-x-1 transition-all" />
+                            <div className="mt-2 flex items-center gap-2 text-govBlue font-black text-[10px] uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-all">
+                                Get Started <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                            </div>
                         </Link>
 
-                        <Link to="/officer/login" className="group bg-slate-900 p-6 rounded-[2rem] hover:shadow-2xl transition-all border border-slate-800 flex items-center gap-6 text-white">
-                            <div className="bg-slate-800 p-4 rounded-2xl group-hover:bg-white group-hover:text-slate-900 transition-colors">
-                                <Briefcase size={32} className="text-white group-hover:text-slate-900" />
+                        <Link to="/officer/login" className="group bg-slate-950 p-8 rounded-[2.5rem] hover:shadow-[0_20px_60px_-15px_rgba(0,0,0,0.4)] transition-all border-2 border-slate-800 flex flex-col items-center gap-4 text-center transform hover:-translate-y-2">
+                            <div className="bg-slate-900 p-6 rounded-3xl group-hover:bg-white group-hover:text-slate-950 transition-all transform group-hover:scale-110 shadow-lg">
+                                <Briefcase size={48} className="text-white group-hover:text-slate-950" />
                             </div>
-                            <div className="text-left">
-                                <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest mb-1">Official Access</p>
-                                <p className="font-bold text-lg leading-tight uppercase tracking-tighter">Duty Entry <br /> & Analytics</p>
+                            <div>
+                                <p className="text-[10px] font-black uppercase text-slate-500 tracking-[0.3em] mb-2">Restricted Access</p>
+                                <p className="text-white font-extrabold text-2xl tracking-tighter uppercase">Official Duty <br /> Entry Port</p>
                             </div>
-                            <ArrowRight size={20} className="text-slate-600 ml-auto group-hover:text-white group-hover:translate-x-1 transition-all" />
+                            <div className="mt-2 flex items-center gap-2 text-white font-black text-[10px] uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-all">
+                                Authenticate <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                            </div>
                         </Link>
                     </div>
                 </div>

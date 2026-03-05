@@ -28,7 +28,11 @@ const OfficerLogin = () => {
                 localStorage.removeItem('user');
             }
         } catch (err) {
-            setError(err.response?.data?.message || 'Authentication failed');
+            if (!err.response) {
+                setError('Secure Service Unavailable: Unable to connect to government server.');
+            } else {
+                setError(err.response?.data?.message || 'Authentication failed: Invalid credentials.');
+            }
         } finally {
             setLoading(false);
         }

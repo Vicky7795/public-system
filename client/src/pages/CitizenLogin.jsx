@@ -27,7 +27,11 @@ const CitizenLogin = () => {
                 localStorage.removeItem('user');
             }
         } catch (error) {
-            setError(error.response?.data?.message || 'Login failed');
+            if (!error.response) {
+                setError('Unable to connect to government server. Please check your internet connection or try again later.');
+            } else {
+                setError(error.response?.data?.message || 'Login failed. Please check your credentials.');
+            }
         } finally {
             setLoading(false);
         }

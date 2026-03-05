@@ -20,7 +20,11 @@ const CitizenRegister = () => {
             localStorage.setItem('user', JSON.stringify(data.user));
             navigate('/dashboard');
         } catch (err) {
-            setError(err.response?.data?.message || 'Registration failed');
+            if (!err.response) {
+                setError('Unable to connect to government server. Please check your internet connection or try again later.');
+            } else {
+                setError(err.response?.data?.message || 'Registration failed. Please check your details.');
+            }
         } finally {
             setLoading(false);
         }
