@@ -34,7 +34,7 @@ services:
     publishDir: dist
     envVars:
       - key: VITE_API_URL
-        value: https://public-grievance-backend.onrender.com/api
+        value: https://public-system-1.onrender.com/api
     routes:
       - type: rewrite
         source: /*
