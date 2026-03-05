@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { User, LogOut, Menu, X, ShieldCheck, Home, ClipboardList, LayoutDashboard } from 'lucide-react';
 
 const Navbar = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [scrolled, setScrolled] = useState(false);
 

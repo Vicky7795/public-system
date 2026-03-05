@@ -77,6 +77,7 @@ const OfficerRegister = () => {
                                     type="text" required
                                     className="w-full pl-12 pr-5 py-3.5 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-slate-900 focus:bg-white outline-none transition-all font-medium text-slate-700 text-sm"
                                     placeholder="e.g. Inspector Sharma"
+                                    value={formData.name}
                                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                                 />
                             </div>
@@ -106,6 +107,7 @@ const OfficerRegister = () => {
                                     type="tel" required
                                     className="w-full pl-12 pr-5 py-3.5 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-slate-900 focus:bg-white outline-none transition-all font-medium text-slate-700 text-sm"
                                     placeholder="+91-XXXXXXXXXX"
+                                    value={formData.phone}
                                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                                 />
                             </div>
@@ -118,6 +120,7 @@ const OfficerRegister = () => {
                                     type="email" required
                                     className="w-full pl-12 pr-5 py-3.5 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-slate-900 focus:bg-white outline-none transition-all font-medium text-slate-700 text-sm"
                                     placeholder="officer@nic.in"
+                                    value={formData.email}
                                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                                 />
                             </div>
@@ -130,6 +133,7 @@ const OfficerRegister = () => {
                                     type="password" required
                                     className="w-full pl-12 pr-5 py-3.5 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-slate-900 focus:bg-white outline-none transition-all font-medium text-slate-700 text-sm"
                                     placeholder="••••••••"
+                                    value={formData.password}
                                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                                 />
                             </div>

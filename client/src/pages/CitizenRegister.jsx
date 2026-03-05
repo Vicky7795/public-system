@@ -82,6 +82,7 @@ const CitizenRegister = () => {
                                         type="text" required
                                         className="w-full pl-16 pr-6 py-6 rounded-3xl bg-white/60 border-2 border-slate-100 focus:border-govBlue focus:bg-white focus:shadow-[0_0_20px_rgba(30,64,175,0.1)] outline-none transition-all font-bold text-slate-900 placeholder:text-slate-300 shadow-sm"
                                         placeholder="Full Name"
+                                        value={formData.name}
                                         onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                                     />
                                 </div>
@@ -94,6 +95,7 @@ const CitizenRegister = () => {
                                         type="tel" required
                                         className="w-full pl-16 pr-6 py-6 rounded-3xl bg-white/60 border-2 border-slate-100 focus:border-govBlue focus:bg-white focus:shadow-[0_0_20px_rgba(30,64,175,0.1)] outline-none transition-all font-bold text-slate-900 placeholder:text-slate-300 shadow-sm"
                                         placeholder="+91-0000000000"
+                                        value={formData.phone}
                                         onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                                     />
                                 </div>
@@ -108,6 +110,7 @@ const CitizenRegister = () => {
                                     type="email" required
                                     className="w-full pl-16 pr-6 py-6 rounded-3xl bg-white/60 border-2 border-slate-100 focus:border-govBlue focus:bg-white focus:shadow-[0_0_20px_rgba(30,64,175,0.1)] outline-none transition-all font-bold text-slate-900 placeholder:text-slate-300 shadow-sm"
                                     placeholder="yourname@domain.nic.in"
+                                    value={formData.email}
                                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                                 />
                             </div>
@@ -121,6 +124,7 @@ const CitizenRegister = () => {
                                     type="password" required
                                     className="w-full pl-16 pr-6 py-6 rounded-3xl bg-white/60 border-2 border-slate-100 focus:border-govBlue focus:bg-white focus:shadow-[0_0_20px_rgba(30,64,175,0.1)] outline-none transition-all font-bold text-slate-900 placeholder:text-slate-300 shadow-sm"
                                     placeholder="••••••••"
+                                    value={formData.password}
                                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                                 />
                             </div>

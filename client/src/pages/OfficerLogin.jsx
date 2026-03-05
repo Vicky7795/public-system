@@ -60,6 +60,7 @@ const OfficerLogin = () => {
                                 type="email" required
                                 className="w-full pl-12 pr-5 py-4 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-slate-900 focus:bg-white outline-none transition-all font-medium text-slate-700"
                                 placeholder="officer@nic.in"
+                                value={formData.email}
                                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                             />
                         </div>
@@ -72,6 +73,7 @@ const OfficerLogin = () => {
                                 type="password" required
                                 className="w-full pl-12 pr-5 py-4 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-slate-900 focus:bg-white outline-none transition-all font-medium text-slate-700"
                                 placeholder="••••••••"
+                                value={formData.password}
                                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                             />
                         </div>

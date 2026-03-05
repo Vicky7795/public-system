@@ -88,6 +88,7 @@ const CitizenLogin = () => {
                                     type="email" required
                                     className="w-full pl-14 pr-6 py-5 rounded-2xl bg-white/50 border-2 border-transparent focus:border-govBlue focus:bg-white outline-none transition-all font-semibold text-slate-700 placeholder:text-slate-300 shadow-inner"
                                     placeholder="yourname@domain.gov"
+                                    value={formData.email}
                                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                                 />
                             </div>
@@ -101,6 +102,7 @@ const CitizenLogin = () => {
                                     type="password" required
                                     className="w-full pl-14 pr-6 py-5 rounded-2xl bg-white/50 border-2 border-transparent focus:border-govBlue focus:bg-white outline-none transition-all font-semibold text-slate-700 placeholder:text-slate-300 shadow-inner"
                                     placeholder="••••••••"
+                                    value={formData.password}
                                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                                 />
                             </div>
