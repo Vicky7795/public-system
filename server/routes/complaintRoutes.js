@@ -64,18 +64,18 @@ const auth = (req, res, next) => {
     }
 };
 
-// Keyword mapping: AI category -> keywords found in DB department names
+// Keyword mapping: category key MUST exactly match department name in DB
 const CATEGORY_KEYWORDS = {
-    'Electricity': ['electr', 'power', 'voltage', 'light', 'energy', 'transformer', 'cut', 'bill', 'street light', 'streetlight', 'pole', 'current', 'wire', 'shock', 'short circuit', 'spark', 'bulb', 'lighting'],
+    'Electricity Department': ['electr', 'power', 'voltage', 'light', 'energy', 'transformer', 'cut', 'bill', 'street light', 'streetlight', 'pole', 'current', 'wire', 'shock', 'short circuit', 'spark', 'bulb', 'lighting', 'electricity', 'fuse', 'meter'],
     'Water Department': ['water', 'leak', 'pipeline', 'tanker', 'sewage', 'pipe', 'tap', 'drain', 'pressure', 'clog', 'burst', 'overflow', 'plumb', 'water supply', 'damaged pipe', 'broken pipe'],
-    'PWD': ['pwd', 'public works', 'road', 'infra', 'pothole', 'bridge', 'pavement', 'highway', 'path', 'street', 'asphalt', 'tar', 'concrete', 'infrastructure'],
-    'Municipal': ['municipal', 'garbage', 'sanit', 'waste', 'sewer', 'drain', 'clean', 'trash', 'dump', 'scaveng', 'smell', 'mosquito', 'litter', 'plastic', 'sanitation'],
-    'Health Department': ['health', 'hospital', 'clinic', 'medical', 'disease', 'dengue', 'vaccine', 'medicine', 'doctor', 'nurse', 'ambulance', 'emergency', 'outbreak', 'medical department'],
-    'Education Department': ['education', 'school', 'teacher', 'student', 'scholarship', 'midday', 'exam', 'bench', 'class', 'college', 'uniform', 'school department'],
+    'PWD': ['pwd', 'public works', 'road', 'pothole', 'bridge', 'pavement', 'highway', 'asphalt', 'tar', 'concrete', 'infrastructure', 'footpath'],
+    'Municipal': ['municipal', 'garbage', 'sanit', 'waste', 'sewer', 'drain', 'clean', 'trash', 'dump', 'smell', 'mosquito', 'litter', 'plastic', 'sanitation'],
+    'Health Department': ['health', 'hospital', 'clinic', 'medical', 'disease', 'dengue', 'vaccine', 'medicine', 'doctor', 'nurse', 'ambulance', 'emergency', 'outbreak'],
+    'Education Department': ['education', 'school', 'teacher', 'student', 'scholarship', 'midday', 'exam', 'bench', 'class', 'college', 'uniform'],
     'Agriculture Department': ['agriculture', 'agri', 'farm', 'crop', 'farmer', 'irrigation', 'pest', 'fertilizer', 'subsidy', 'harvest', 'soil', 'canal', 'livestock', 'farming'],
     'Transport Department': ['transport', 'traffic', 'bus', 'auto', 'vehicle', 'road accident', 'license', 'signal', 'crossing', 'parking', 'rickshaw', 'rto'],
     'Social Welfare': ['welfare', 'social', 'pension', 'ration', 'bpl', 'disabled', 'mnrega', 'aadhaar', 'scheme', 'poverty', 'orphan'],
-    'Police': ['police', 'crime', 'theft', 'robbery', 'law', 'order', 'fir', 'drug', 'harassment', 'safety', 'fight', 'steal', 'threat', 'emergency', 'cop'],
+    'Police': ['police', 'crime', 'theft', 'robbery', 'law', 'order', 'fir', 'drug', 'harassment', 'safety', 'fight', 'steal', 'threat', 'cop'],
     'Revenue Department': ['revenue', 'property tax', 'land record', 'certificate', 'mutation', 'caste', 'ration card', 'income', 'patwari', 'tehsil', 'tax'],
     'Forest Department': ['forest', 'tree', 'wildlife', 'poach', 'mining', 'deforest', 'ecology', 'timber', 'nature', 'animal', 'reserve'],
     'General': ['general', 'misc', 'other']
