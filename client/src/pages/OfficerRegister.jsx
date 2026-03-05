@@ -4,7 +4,7 @@ import api from '../utils/api';
 import { User, Phone, Mail, Lock, Loader2, ShieldPlus, Building2 } from 'lucide-react';
 
 const OfficerRegister = () => {
-    const [formData, setFormData] = useState({ name: '', phone: '', email: '', password: '', role: 'Officer', departmentId: '' });
+    const [formData, setFormData] = useState({ name: '', phone: '', email: '', password: 'officer123', role: 'Officer', departmentId: '' });
     const [departments, setDepartments] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -130,13 +130,13 @@ const OfficerRegister = () => {
                             <div className="relative">
                                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                                 <input
-                                    type="password" required
-                                    className="w-full pl-12 pr-5 py-3.5 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-slate-900 focus:bg-white outline-none transition-all font-medium text-slate-700 text-sm"
-                                    placeholder="••••••••"
-                                    value={formData.password}
-                                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                                    type="text"
+                                    readOnly
+                                    value="officer123"
+                                    className="w-full pl-12 pr-5 py-3.5 rounded-2xl bg-slate-100 border-2 border-slate-200 outline-none font-bold text-slate-500 text-sm cursor-not-allowed select-none"
                                 />
                             </div>
+                            <p className="text-[10px] text-slate-400 font-bold mt-1.5 px-1">⚠️ All officers use this default key. Change after first login.</p>
                         </div>
                     </div>
 
