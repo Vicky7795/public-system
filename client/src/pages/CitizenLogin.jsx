@@ -142,7 +142,7 @@ const CitizenLogin = () => {
                                 theme="filled_blue"
                                 shape="pill"
                                 text="signin_with"
-                                width="100%"
+                                width="400"
                             />
                         </div>
                     </form>

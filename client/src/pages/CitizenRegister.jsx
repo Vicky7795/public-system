@@ -159,7 +159,7 @@ const CitizenRegister = () => {
                             theme="filled_blue"
                             shape="pill"
                             text="signup_with"
-                            width="100%"
+                            width="400"
                         />
                     </div>
                 </div>
