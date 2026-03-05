@@ -66,16 +66,16 @@ const auth = (req, res, next) => {
 
 // Keyword mapping: AI category -> keywords found in DB department names
 const CATEGORY_KEYWORDS = {
-    'Electricity': ['electr', 'power', 'voltage', 'light', 'energy', 'transformer', 'cut', 'bill', 'street light', 'pole', 'current', 'wire', 'shock', 'short circuit', 'spark'],
-    'Water Department': ['water', 'leak', 'pipeline', 'tanker', 'sewage', 'pipe', 'tap', 'drain', 'pressure', 'clog', 'burst', 'overflow', 'plumb'],
-    'PWD': ['pwd', 'public works', 'road', 'infra', 'pothole', 'bridge', 'pavement', 'highway', 'path', 'street', 'asphalt', 'tar', 'concrete'],
-    'Municipal': ['municipal', 'garbage', 'sanit', 'waste', 'sewer', 'drain', 'clean', 'trash', 'dump', 'scaveng', 'smell', 'mosquito', 'litter', 'plastic'],
-    'Health Department': ['health', 'hospital', 'clinic', 'medical', 'disease', 'dengue', 'vaccine', 'medicine', 'doctor', 'nurse', 'ambulance', 'emergency', 'outbreak'],
-    'Education Department': ['education', 'school', 'teacher', 'student', 'scholarship', 'midday', 'exam', 'bench', 'class', 'college', 'uniform'],
-    'Agriculture Department': ['agriculture', 'agri', 'farm', 'crop', 'farmer', 'irrigation', 'pest', 'fertilizer', 'subsidy', 'harvest', 'soil', 'canal', 'livestock'],
-    'Transport Department': ['transport', 'traffic', 'bus', 'auto', 'vehicle', 'road accident', 'license', 'signal', 'crossing', 'parking', 'rickshaw'],
+    'Electricity': ['electr', 'power', 'voltage', 'light', 'energy', 'transformer', 'cut', 'bill', 'street light', 'streetlight', 'pole', 'current', 'wire', 'shock', 'short circuit', 'spark'],
+    'Water Department': ['water', 'leak', 'pipeline', 'tanker', 'sewage', 'pipe', 'tap', 'drain', 'pressure', 'clog', 'burst', 'overflow', 'plumb', 'water supply'],
+    'PWD': ['pwd', 'public works', 'road', 'infra', 'pothole', 'bridge', 'pavement', 'highway', 'path', 'street', 'asphalt', 'tar', 'concrete', 'infrastructure'],
+    'Municipal': ['municipal', 'garbage', 'sanit', 'waste', 'sewer', 'drain', 'clean', 'trash', 'dump', 'scaveng', 'smell', 'mosquito', 'litter', 'plastic', 'sanitation'],
+    'Health Department': ['health', 'hospital', 'clinic', 'medical', 'disease', 'dengue', 'vaccine', 'medicine', 'doctor', 'nurse', 'ambulance', 'emergency', 'outbreak', 'medical department'],
+    'Education Department': ['education', 'school', 'teacher', 'student', 'scholarship', 'midday', 'exam', 'bench', 'class', 'college', 'uniform', 'school department'],
+    'Agriculture Department': ['agriculture', 'agri', 'farm', 'crop', 'farmer', 'irrigation', 'pest', 'fertilizer', 'subsidy', 'harvest', 'soil', 'canal', 'livestock', 'farming'],
+    'Transport Department': ['transport', 'traffic', 'bus', 'auto', 'vehicle', 'road accident', 'license', 'signal', 'crossing', 'parking', 'rickshaw', 'rto'],
     'Social Welfare': ['welfare', 'social', 'pension', 'ration', 'bpl', 'disabled', 'mnrega', 'aadhaar', 'scheme', 'poverty', 'orphan'],
-    'Police': ['police', 'crime', 'theft', 'robbery', 'law', 'order', 'fir', 'drug', 'harassment', 'safety', 'fight', 'steal', 'threat', 'emergency'],
+    'Police': ['police', 'crime', 'theft', 'robbery', 'law', 'order', 'fir', 'drug', 'harassment', 'safety', 'fight', 'steal', 'threat', 'emergency', 'cop'],
     'Revenue Department': ['revenue', 'property tax', 'land record', 'certificate', 'mutation', 'caste', 'ration card', 'income', 'patwari', 'tehsil', 'tax'],
     'Forest Department': ['forest', 'tree', 'wildlife', 'poach', 'mining', 'deforest', 'ecology', 'timber', 'nature', 'animal', 'reserve'],
     'General': ['general', 'misc', 'other']
@@ -90,52 +90,75 @@ const classifyTextByKeywords = (text) => {
     let maxMatches = 0;
     const lowerText = text.toLowerCase();
 
+    const results = [];
+
     for (const [category, keywords] of Object.entries(CATEGORY_KEYWORDS)) {
         if (category === 'General') continue;
         let score = 0;
+        const matchedKeywords = [];
         for (const kw of keywords) {
-            // Count occurrences or just existence? Existence is safer for short texts.
             if (lowerText.includes(kw.toLowerCase())) {
                 score++;
+                matchedKeywords.push(kw);
             }
+        }
+        if (score > 0) {
+            results.push({ category, score, matchedKeywords });
         }
         if (score > maxMatches) {
             maxMatches = score;
             bestCategory = category;
         }
     }
+
+    console.log(`[Classification] Keyword Scores for "${text.substring(0, 50)}...":`, results);
     return bestCategory;
 };
 
 // Smart department lookup: exact match first, then keyword fallback
 const findDepartmentForCategory = async (Department, category) => {
-    if (!category || category === 'General') return null;
+    if (!category || category === 'General') {
+        console.log(`[Department Discovery] Category is "${category}". Skipping lookup.`);
+        return null;
+    }
+
+    console.log(`[Department Discovery] Seeking department for category: "${category}"`);
 
     // 1. Try exact match (case-insensitive)
     let dept = await Department.findOne({ departmentName: new RegExp(`^${category}$`, 'i') });
-    if (dept) return dept;
+    if (dept) {
+        console.log(`[Department Discovery] Exact Match found: "${dept.departmentName}"`);
+        return dept;
+    }
 
-    // 2. Try partial match on department name (e.g. "Water" matching "Water Department")
+    // 2. Try partial match on department name
     dept = await Department.findOne({ departmentName: new RegExp(category, 'i') });
-    if (dept) return dept;
+    if (dept) {
+        console.log(`[Department Discovery] Partial Match found: "${dept.departmentName}" for input "${category}"`);
+        return dept;
+    }
 
     // 3. Try mapping via CATEGORY_KEYWORDS
     for (const [deptKey, keywords] of Object.entries(CATEGORY_KEYWORDS)) {
-        // If the AI category matches the keyword group name
         if (category.toLowerCase().includes(deptKey.toLowerCase()) || deptKey.toLowerCase().includes(category.toLowerCase())) {
             dept = await Department.findOne({ departmentName: new RegExp(deptKey, 'i') });
-            if (dept) return dept;
+            if (dept) {
+                console.log(`[Department Discovery] Mapping Match found: "${dept.departmentName}" via key "${deptKey}"`);
+                return dept;
+            }
         }
-
-        // If the AI category contains any of the specific keywords
         for (const kw of keywords) {
             if (category.toLowerCase().includes(kw.toLowerCase())) {
                 dept = await Department.findOne({ departmentName: new RegExp(deptKey, 'i') });
-                if (dept) return dept;
+                if (dept) {
+                    console.log(`[Department Discovery] Keyword Mapping Match found: "${dept.departmentName}" via keyword "${kw}"`);
+                    return dept;
+                }
             }
         }
     }
 
+    console.warn(`[Department Discovery] FAILED to resolve any department for category: "${category}"`);
     return null;
 };
 
@@ -225,24 +248,29 @@ router.post('/', auth, async (req, res) => {
 
         // 1. AI Prediction
         try {
+            const combinedInput = `${title} ${description}`;
+            console.log(`[POST /complaints] Requesting AI prediction for: "${combinedInput.substring(0, 50)}..."`);
             const aiResponse = await axios.post(`${process.env.AI_SERVICE_URL}/predict`, {
-                text: description,
-                description: description
+                text: combinedInput,
+                description: combinedInput
             });
             category = aiResponse.data.category;
             priority = aiResponse.data.priority;
-            console.log("AI Prediction Success:", { category, priority });
+            console.log(`[POST /complaints] AI Prediction Result: category="${category}", priority="${priority}"`);
         } catch (aiErr) {
-            console.error("AI service error (non-fatal):", aiErr.message);
+            console.error("[POST /complaints] AI service error (non-fatal):", aiErr.message);
         }
 
         // 1b. Local Classification Fallback
         if (!category || category === "General") {
+            console.log(`[POST /complaints] AI returned "${category}". Triggering local keyword fallback...`);
             const combinedText = `${title} ${description}`;
             const fallbackCategory = classifyTextByKeywords(combinedText);
             if (fallbackCategory !== "General") {
                 category = fallbackCategory;
-                console.log("Local Fallback Classification Success:", { category });
+                console.log(`[POST /complaints] Local Fallback adopted: "${category}"`);
+            } else {
+                console.log(`[POST /complaints] Local Fallback also returned "General".`);
             }
         }
 
