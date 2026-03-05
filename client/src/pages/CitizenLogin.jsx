@@ -22,7 +22,7 @@ const CitizenLogin = () => {
             if (data.user && (data.user.role === 'Citizen' || data.user.role === 'Admin')) {
                 navigate(data.user.role === 'Admin' ? '/admin' : '/dashboard');
             } else {
-                setError('Please use the Officer Portal to login.');
+                setError('This account is registered as an Official. Please use the Officer Portal to login.');
                 localStorage.removeItem('token');
                 localStorage.removeItem('user');
             }
@@ -44,7 +44,14 @@ const CitizenLogin = () => {
             const { data } = await api.post('/auth/google', { credential: response.credential });
             localStorage.setItem('token', data.token);
             localStorage.setItem('user', JSON.stringify(data.user));
-            navigate('/dashboard');
+
+            if (data.user && (data.user.role === 'Citizen' || data.user.role === 'Admin')) {
+                navigate(data.user.role === 'Admin' ? '/admin' : '/dashboard');
+            } else {
+                setError('This account is registered as an Official. Please use the Officer Portal to login.');
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+            }
         } catch (error) {
             setError(error.response?.data?.message || 'Google login failed');
         } finally {

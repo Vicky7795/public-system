@@ -23,7 +23,7 @@ const OfficerLogin = () => {
             } else if (data.user.role === 'Admin') {
                 navigate('/admin');
             } else {
-                setError('Unauthorized: This portal is for government officers only.');
+                setError('This account is registered as a Citizen. Please use the Citizen Portal to login.');
                 localStorage.removeItem('token');
                 localStorage.removeItem('user');
             }

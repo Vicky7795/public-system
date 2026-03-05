@@ -45,7 +45,7 @@ const LandingPage = () => {
                     <h1 className="text-5xl md:text-7xl font-black mb-8 leading-tight tracking-tight">AI Public Grievance <br /> Redressal System</h1>
 
                     <div className="grid md:grid-cols-2 gap-8 max-w-3xl mx-auto">
-                        <Link to="/citizen/register" className="group bg-white p-8 rounded-[2.5rem] hover:shadow-[0_20px_60px_-15px_rgba(255,255,255,0.3)] transition-all border-2 border-white/20 flex flex-col items-center gap-4 text-center transform hover:-translate-y-2">
+                        <div className="group bg-white p-8 rounded-[2.5rem] hover:shadow-[0_20px_60px_-15px_rgba(255,255,255,0.3)] transition-all border-2 border-white/20 flex flex-col items-center gap-4 text-center transform hover:-translate-y-2">
                             <div className="bg-blue-50 p-6 rounded-3xl group-hover:bg-govBlue group-hover:text-white transition-all transform group-hover:scale-110 shadow-inner">
                                 <UserCircle size={48} className="text-govBlue group-hover:text-white" />
                             </div>
@@ -53,12 +53,17 @@ const LandingPage = () => {
                                 <p className="text-[10px] font-black uppercase text-govBlue tracking-[0.3em] mb-2 opacity-60">Citizen Portal</p>
                                 <p className="text-slate-900 font-extrabold text-2xl tracking-tighter uppercase">Report & Track <br /> Grievances</p>
                             </div>
-                            <div className="mt-2 flex items-center gap-2 text-govBlue font-black text-[10px] uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-all">
-                                Get Started <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                            <div className="flex gap-4 mt-2">
+                                <Link to="/citizen/login" className="bg-govBlue text-white px-6 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-blue-700 transition-colors shadow-lg">
+                                    Login
+                                </Link>
+                                <Link to="/citizen/register" className="bg-slate-50 text-govBlue px-6 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest border border-blue-100 hover:bg-blue-50 transition-colors">
+                                    Register
+                                </Link>
                             </div>
-                        </Link>
+                        </div>
 
-                        <Link to="/officer/login" className="group bg-slate-950 p-8 rounded-[2.5rem] hover:shadow-[0_20px_60px_-15px_rgba(0,0,0,0.4)] transition-all border-2 border-slate-800 flex flex-col items-center gap-4 text-center transform hover:-translate-y-2">
+                        <div className="group bg-slate-950 p-8 rounded-[2.5rem] hover:shadow-[0_20px_60px_-15px_rgba(0,0,0,0.4)] transition-all border-2 border-slate-800 flex flex-col items-center gap-4 text-center transform hover:-translate-y-2">
                             <div className="bg-slate-900 p-6 rounded-3xl group-hover:bg-white group-hover:text-slate-950 transition-all transform group-hover:scale-110 shadow-lg">
                                 <Briefcase size={48} className="text-white group-hover:text-slate-950" />
                             </div>
@@ -66,10 +71,15 @@ const LandingPage = () => {
                                 <p className="text-[10px] font-black uppercase text-slate-500 tracking-[0.3em] mb-2">Restricted Access</p>
                                 <p className="text-white font-extrabold text-2xl tracking-tighter uppercase">Official Duty <br /> Entry Port</p>
                             </div>
-                            <div className="mt-2 flex items-center gap-2 text-white font-black text-[10px] uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-all">
-                                Authenticate <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                            <div className="flex gap-4 mt-2">
+                                <Link to="/officer/login" className="bg-white text-slate-950 px-6 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-200 transition-colors shadow-lg">
+                                    Enter
+                                </Link>
+                                <Link to="/officer/register" className="bg-slate-900 text-white/60 px-6 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest border border-slate-800 hover:text-white transition-colors">
+                                    Join Desk
+                                </Link>
                             </div>
-                        </Link>
+                        </div>
                     </div>
                 </div>
             </section>

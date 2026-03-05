@@ -42,7 +42,7 @@ router.post('/register', async (req, res) => {
         await user.save();
 
         const token = jwt.sign({ id: user._id, role: user.role, departmentId: user.departmentId }, process.env.JWT_SECRET);
-        res.json({ token, user: { id: user._id, name, role, departmentId: user.departmentId } });
+        res.json({ token, user: { id: user._id, name, role: user.role, departmentId: user.departmentId } });
     } catch (err) {
         console.error('Registration Error:', err);
         if (err.code === 11000) {
