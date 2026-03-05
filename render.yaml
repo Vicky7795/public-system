@@ -19,11 +19,15 @@ services:
     startCommand: node index.js
     envVars:
       - key: MONGODB_URI
-        value: mongodb+srv://nagarevivek206_db_user:7sEHEKssevVynHVB@cluster0.sqyv5qq.mongodb.net/?appName=Cluster0
+        value: mongodb+srv://nagarevivek206_db_user:7sEHEKssevVynHVB@cluster0.sqyv5qq.mongodb.net/pgrs?retryWrites=true&w=majority&appName=Cluster0
       - key: AI_SERVICE_URL
-        value: http://public-grievance-ai
+        value: https://public-grievance-ai.onrender.com
       - key: JWT_SECRET
-        generateValue: true # Generates a random one-time key for you!
+        generateValue: true
+      - key: GOOGLE_CLIENT_ID
+        value: 225202389234-1mu2smt3l6265cj9rskmnsr8aeoai97c.apps.googleusercontent.com
+      - key: NODE_ENV
+        value: production
 
   # 3. Frontend (Static Site)
   - type: static
