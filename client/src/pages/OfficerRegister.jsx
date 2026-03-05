@@ -5,6 +5,7 @@ import { User, Phone, Mail, Lock, Loader2, ShieldPlus, Building2 } from 'lucide-
 
 const OfficerRegister = () => {
     const [formData, setFormData] = useState({ name: '', phone: '', email: '', password: 'officer123', role: 'Officer', departmentId: '' });
+    const [secretKey, setSecretKey] = useState('');
     const [departments, setDepartments] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -28,6 +29,10 @@ const OfficerRegister = () => {
         e.preventDefault();
         if (!formData.departmentId) {
             setError('Please select a department from the list.');
+            return;
+        }
+        if (secretKey !== 'officer123') {
+            setError('Invalid Secret Access Key. Please contact your administrator.');
             return;
         }
         setLoading(true);
@@ -130,13 +135,14 @@ const OfficerRegister = () => {
                             <div className="relative">
                                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                                 <input
-                                    type="text"
-                                    readOnly
-                                    value="officer123"
-                                    className="w-full pl-12 pr-5 py-3.5 rounded-2xl bg-slate-100 border-2 border-slate-200 outline-none font-bold text-slate-500 text-sm cursor-not-allowed select-none"
+                                    type="password"
+                                    required
+                                    className="w-full pl-12 pr-5 py-3.5 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-slate-900 focus:bg-white outline-none transition-all font-medium text-slate-700 text-sm"
+                                    placeholder="Enter secret key to register"
+                                    value={secretKey}
+                                    onChange={(e) => setSecretKey(e.target.value)}
                                 />
                             </div>
-                            <p className="text-[10px] text-slate-400 font-bold mt-1.5 px-1">⚠️ All officers use this default key. Change after first login.</p>
                         </div>
                     </div>
 
