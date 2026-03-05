@@ -42,7 +42,7 @@ const CitizenRegister = () => {
     };
 
     return (
-        <div className="flex items-center justify-center min-vh-100 p-6 mesh-gradient selection:bg-green-100 selection:text-green-900">
+        <div className="flex items-center justify-center min-h-screen p-6 mesh-gradient selection:bg-green-100 selection:text-green-900">
             <div className="w-full max-w-xl">
                 <div className="flex justify-between items-center mb-10 animate-fade-in-up">
                     <Link to="/citizen/login" className="group flex items-center gap-2 text-slate-700 hover:text-govBlue font-black text-[10px] uppercase tracking-widest transition-all">

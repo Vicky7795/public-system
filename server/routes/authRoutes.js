@@ -11,13 +11,20 @@ const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 router.post('/register', async (req, res) => {
     try {
         const { name, phone, email, password, role, departmentId, assignedArea } = req.body;
-        const normalizedEmail = email.toLowerCase();
+        const normalizedEmail = email?.toLowerCase().trim();
+        if (!normalizedEmail) return res.status(400).json({ message: 'Email is required' });
+
+        // 1. Check if email exists
         let user = await User.findOne({ email: normalizedEmail });
         if (user) return res.status(400).json({ message: 'User already exists with this email' });
 
+        // 2. Check if phone exists (to avoid relying solely on catch block for common errors)
+        const existingPhone = await User.findOne({ phone: phone.trim() });
+        if (existingPhone) return res.status(400).json({ message: 'User already exists with this phone number' });
+
         const userData = {
             name,
-            phone,
+            phone: phone.trim(),
             email: normalizedEmail,
             password: bcrypt.hashSync(password, 10),
             role
@@ -34,11 +41,12 @@ router.post('/register', async (req, res) => {
         const token = jwt.sign({ id: user._id, role: user.role, departmentId: user.departmentId }, process.env.JWT_SECRET);
         res.json({ token, user: { id: user._id, name, role, departmentId: user.departmentId } });
     } catch (err) {
+        console.error('Registration Error:', err);
         if (err.code === 11000) {
-            const field = Object.keys(err.keyPattern)[0];
+            const field = err.keyPattern ? Object.keys(err.keyPattern)[0] : 'field';
             return res.status(400).json({ message: `${field.charAt(0).toUpperCase() + field.slice(1)} already exists. Please use another or login.` });
         }
-        res.status(500).json({ message: err.message });
+        res.status(500).json({ message: err.message || 'Server error during registration' });
     }
 });
 

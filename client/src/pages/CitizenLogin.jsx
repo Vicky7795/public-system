@@ -19,8 +19,8 @@ const CitizenLogin = () => {
             localStorage.setItem('token', data.token);
             localStorage.setItem('user', JSON.stringify(data.user));
 
-            if (data.user.role === 'Citizen') {
-                navigate('/dashboard');
+            if (data.user && (data.user.role === 'Citizen' || data.user.role === 'Admin')) {
+                navigate(data.user.role === 'Admin' ? '/admin' : '/dashboard');
             } else {
                 setError('Please use the Officer Portal to login.');
                 localStorage.removeItem('token');
@@ -49,7 +49,7 @@ const CitizenLogin = () => {
     };
 
     return (
-        <div className="flex items-center justify-center min-vh-100 p-6 mesh-gradient selection:bg-blue-100 selection:text-blue-900">
+        <div className="flex items-center justify-center min-h-screen p-6 mesh-gradient selection:bg-blue-100 selection:text-blue-900">
             <div className="w-full max-w-lg">
                 <div className="text-center mb-10 animate-fade-in-up">
                     <div className="inline-flex items-center gap-3 px-4 py-2 rounded-full bg-blue-50 text-govBlue font-black text-[10px] uppercase tracking-[0.2em] mb-6 border border-blue-100 shadow-sm">
