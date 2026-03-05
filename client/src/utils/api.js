@@ -1,7 +1,13 @@
 import axios from 'axios';
 
+const getBaseURL = () => {
+    if (import.meta.env.VITE_API_BASE_URL) return import.meta.env.VITE_API_BASE_URL;
+    const { hostname } = window.location;
+    return `http://${hostname}:5000/api`;
+};
+
 const api = axios.create({
-    baseURL: import.meta.env.VITE_API_BASE_URL || 'https://public-grievance-backend.onrender.com/api',
+    baseURL: getBaseURL(),
 });
 
 api.interceptors.request.use((config) => {

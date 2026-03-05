@@ -26,6 +26,14 @@ The easiest way to run the entire project is using the `start.py` script in the 
     - **Backend API:** [http://localhost:5000](http://localhost:5000)
     - **AI Model API:** [http://localhost:8000](http://localhost:8000)
 
+### Accessing from Other Devices (LAN)
+
+To access the dashboard from a phone or another laptop on the same Wi-Fi:
+1.  Find your computer's IP address (Run `ipconfig` on Windows).
+2.  Use the IP address instead of `localhost` in your browser:
+    - **Frontend:** `http://<YOUR_IP>:5173`
+    - **Example:** `http://192.168.1.5:5173`
+
 ## Manual Setup (If `start.py` fails)
 
 ### 1. AI Service

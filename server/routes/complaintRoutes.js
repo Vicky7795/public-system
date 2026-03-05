@@ -66,8 +66,8 @@ const auth = (req, res, next) => {
 
 // Keyword mapping: AI category -> keywords found in DB department names
 const CATEGORY_KEYWORDS = {
-    'Electricity': ['electr', 'power', 'voltage', 'light', 'energy', 'transformer', 'cut', 'bill', 'street light', 'streetlight', 'pole', 'current', 'wire', 'shock', 'short circuit', 'spark'],
-    'Water Department': ['water', 'leak', 'pipeline', 'tanker', 'sewage', 'pipe', 'tap', 'drain', 'pressure', 'clog', 'burst', 'overflow', 'plumb', 'water supply'],
+    'Electricity': ['electr', 'power', 'voltage', 'light', 'energy', 'transformer', 'cut', 'bill', 'street light', 'streetlight', 'pole', 'current', 'wire', 'shock', 'short circuit', 'spark', 'bulb', 'lighting'],
+    'Water Department': ['water', 'leak', 'pipeline', 'tanker', 'sewage', 'pipe', 'tap', 'drain', 'pressure', 'clog', 'burst', 'overflow', 'plumb', 'water supply', 'damaged pipe', 'broken pipe'],
     'PWD': ['pwd', 'public works', 'road', 'infra', 'pothole', 'bridge', 'pavement', 'highway', 'path', 'street', 'asphalt', 'tar', 'concrete', 'infrastructure'],
     'Municipal': ['municipal', 'garbage', 'sanit', 'waste', 'sewer', 'drain', 'clean', 'trash', 'dump', 'scaveng', 'smell', 'mosquito', 'litter', 'plastic', 'sanitation'],
     'Health Department': ['health', 'hospital', 'clinic', 'medical', 'disease', 'dengue', 'vaccine', 'medicine', 'doctor', 'nurse', 'ambulance', 'emergency', 'outbreak', 'medical department'],
