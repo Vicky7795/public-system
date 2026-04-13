@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../utils/api';
 import { Send, Image, MapPin, Loader2, CheckCircle2, X, Navigation, PenLine } from 'lucide-react';
+import BackButton from '../components/BackButton';
 
 const SubmitComplaint = () => {
     const [formData, setFormData] = useState({ title: '', description: '' });
@@ -189,6 +190,7 @@ const SubmitComplaint = () => {
     /* ── Form ──────────────────────────────────────────────── */
     return (
         <div className="max-w-2xl mx-auto p-6 mt-8">
+            <BackButton fallbackPath="/dashboard" className="mb-4" />
             <h2 className="text-3xl font-bold text-slate-800 mb-8 border-b-4 border-govBlue w-fit pb-2">File a New Grievance</h2>
             <form onSubmit={handleSubmit} className="space-y-6 bg-white p-8 rounded-xl shadow-md border">
 

@@ -13,6 +13,7 @@ import {
     LineChart, Line, XAxis, YAxis, CartesianGrid, Legend,
     BarChart, Bar
 } from 'recharts';
+import BackButton from '../components/BackButton';
 
 const DEPT_COLORS = ['#2563EB', '#7C3AED', '#059669', '#D97706', '#DC2626', '#0891B2', '#9333EA', '#16A34A'];
 
@@ -213,6 +214,7 @@ const AdminDashboard = () => {
             <main className="flex-1 ml-64 p-8">
                 <header className="flex justify-between items-center mb-8">
                     <div>
+                        <BackButton fallbackPath="/" className="mb-2" />
                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] mb-1">Admin Portal</p>
                         <h1 className="text-3xl font-black text-slate-900 tracking-tighter">{activeTab}</h1>
                     </div>

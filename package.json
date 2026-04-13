@@ -3,11 +3,12 @@
     "version": "1.0.0",
     "description": "Root package to manage all services",
     "scripts": {
-        "start": "python start.py",
-        "install-all": "npm install --prefix client && npm install --prefix server && pip install -r ai-model/requirements.txt",
+        "install-all": "npm install --prefix client && npm install --prefix server",
         "dev:server": "npm run dev --prefix server",
         "dev:client": "npm run dev --prefix client",
-        "dev:ai": "cd ai-model && ..\\.venv\\Scripts\\python.exe app.py"
+        "dev": "concurrently \"npm run dev --prefix client\" \"npm run dev --prefix server\""
     },
-    "dependencies": {}
+    "dependencies": {
+        "concurrently": "^9.2.1"
+    }
 }

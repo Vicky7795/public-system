@@ -13,6 +13,8 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
+import BackButton from '../components/BackButton';
+
 const Departments = () => {
     const [departments, setDepartments] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -68,9 +70,7 @@ const Departments = () => {
         <div className="container mx-auto p-8 max-w-7xl animate-fade-in-up">
             <header className="flex justify-between items-center mb-10">
                 <div>
-                    <Link to="/admin" className="text-slate-500 flex items-center gap-2 mb-2 font-black text-[10px] uppercase tracking-widest hover:text-govBlue transition-all">
-                        <ArrowLeft size={14} /> Back to Dashboard
-                    </Link>
+                    <BackButton fallbackPath="/admin" />
                     <h1 className="text-4xl font-black text-slate-900 tracking-tighter">Department Management</h1>
                     <p className="text-slate-500 font-medium">Configure resource silos and SLA targets</p>
                 </div>

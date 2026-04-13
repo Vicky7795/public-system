@@ -3,6 +3,8 @@ import { useNavigate, Link } from 'react-router-dom';
 import api from '../utils/api';
 import { Mail, Phone, Lock, Loader2, ArrowLeft, CheckCircle2, AlertCircle } from 'lucide-react';
 
+import BackButton from '../components/BackButton';
+
 const CitizenForgotPassword = () => {
     const [formData, setFormData] = useState({
         email: '',
@@ -42,10 +44,7 @@ const CitizenForgotPassword = () => {
         <div className="flex items-center justify-center min-h-screen p-6 mesh-gradient">
             <div className="w-full max-w-lg">
                 <div className="text-center mb-10 animate-fade-in-up">
-                    <Link to="/citizen/login" className="inline-flex items-center gap-2 text-slate-400 hover:text-govBlue font-black text-[10px] uppercase tracking-widest mb-6 transition-all group">
-                        <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" />
-                        Back to Login
-                    </Link>
+                    <BackButton fallbackPath="/citizen/login" className="mx-auto" />
                     <h1 className="text-5xl font-black text-slate-900 mb-3 tracking-tighter">Reset password</h1>
                     <p className="text-slate-500 font-medium">Verify your identity to secure your account</p>
                 </div>

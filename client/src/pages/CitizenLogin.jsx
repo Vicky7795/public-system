@@ -4,6 +4,8 @@ import { GoogleLogin } from '@react-oauth/google';
 import api from '../utils/api';
 import { Mail, Lock, Loader2, User, ArrowRight, AlertCircle } from 'lucide-react';
 
+import BackButton from '../components/BackButton';
+
 const CitizenLogin = () => {
     const [formData, setFormData] = useState({ email: '', password: '' });
     const [loading, setLoading] = useState(false);
@@ -60,9 +62,13 @@ const CitizenLogin = () => {
     };
 
     return (
-        <div className="flex items-center justify-center min-h-screen p-6 mesh-gradient selection:bg-blue-100 selection:text-blue-900">
-            <div className="w-full max-w-lg">
-                <div className="text-center mb-10 animate-fade-in-up">
+        <div className="flex flex-col min-h-screen p-6 mesh-gradient selection:bg-blue-100 selection:text-blue-900">
+            <div className="container mx-auto max-w-7xl">
+                <BackButton fallbackPath="/" />
+            </div>
+            <div className="flex-1 flex items-center justify-center">
+                <div className="w-full max-w-lg">
+                    <div className="text-center mb-10 animate-fade-in-up">
                     <div className="inline-flex items-center gap-3 px-4 py-2 rounded-full bg-blue-50 text-govBlue font-black text-[10px] uppercase tracking-[0.2em] mb-6 border border-blue-100 shadow-sm">
                         <span className="w-1.5 h-1.5 rounded-full bg-govBlue animate-pulse"></span>
                         Secure Access Portal
@@ -165,6 +171,7 @@ const CitizenLogin = () => {
                         Trusted Gov Cloud
                         <span className="w-8 h-px bg-slate-200"></span>
                     </p>
+                </div>
                 </div>
             </div>
         </div>

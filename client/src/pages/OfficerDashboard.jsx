@@ -17,6 +17,8 @@ import {
     FileText
 } from 'lucide-react';
 
+import BackButton from '../components/BackButton';
+
 const OfficerDashboard = () => {
     const [view, setView] = useState('mine'); // 'mine' or 'pool'
     const [complaints, setComplaints] = useState([]);
@@ -158,6 +160,7 @@ const OfficerDashboard = () => {
 
     return (
         <div className="container mx-auto p-4 sm:p-6 max-w-7xl animate-in fade-in duration-700">
+            <BackButton />
             {fetchError && (
                 <div className="mb-6 bg-red-50 border border-red-100 text-red-700 px-6 py-4 rounded-2xl font-bold text-sm flex items-center gap-3">
                     <span className="text-xl">⚠️</span>

@@ -4,6 +4,8 @@ import { GoogleLogin } from '@react-oauth/google';
 import api from '../utils/api';
 import { User, Phone, Mail, Lock, Loader2, ArrowRight, ArrowLeft, AlertCircle, ShieldCheck } from 'lucide-react';
 
+import BackButton from '../components/BackButton';
+
 const CitizenRegister = () => {
     const [formData, setFormData] = useState({ name: '', phone: '', email: '', password: '', role: 'Citizen' });
     const [loading, setLoading] = useState(false);
@@ -48,11 +50,8 @@ const CitizenRegister = () => {
     return (
         <div className="flex items-center justify-center min-h-screen p-6 mesh-gradient selection:bg-green-100 selection:text-green-900">
             <div className="w-full max-w-xl">
-                <div className="flex justify-between items-center mb-10 animate-fade-in-up">
-                    <Link to="/citizen/login" className="group flex items-center gap-2 text-slate-700 hover:text-govBlue font-black text-[10px] uppercase tracking-widest transition-all">
-                        <ArrowLeft size={16} className="transition-transform group-hover:-translate-x-1" />
-                        Back to Login
-                    </Link>
+                <div className="flex justify-between items-center mb-6 animate-fade-in-up">
+                    <BackButton fallbackPath="/citizen/login" className="mb-0" />
                     <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-green-100 text-green-900 font-black text-[10px] uppercase tracking-[0.25em] border border-green-200 shadow-sm">
                         <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.6)]"></span>
                         Citizen Verified

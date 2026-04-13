@@ -16,6 +16,7 @@ import {
     Send
 } from 'lucide-react';
 import api from '../utils/api';
+import BackButton from '../components/BackButton';
 
 const statusConfig = {
     'Pending': { color: 'bg-slate-100 text-slate-600 border-slate-300', icon: <Clock size={16} />, step: 1 },
@@ -113,6 +114,7 @@ const TrackTicket = () => {
 
     return (
         <div className="max-w-2xl mx-auto p-6 mt-8">
+            <BackButton fallbackPath="/dashboard" className="mb-4" />
             <h2 className="text-3xl font-bold text-slate-800 mb-2 border-b-4 border-govBlue w-fit pb-2">
                 Track Your Grievance
             </h2>

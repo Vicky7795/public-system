@@ -3,6 +3,8 @@ import { useNavigate, Link } from 'react-router-dom';
 import api from '../utils/api';
 import { User, Phone, Mail, Lock, Loader2, ShieldPlus, Building2 } from 'lucide-react';
 
+import BackButton from '../components/BackButton';
+
 const OfficerRegister = () => {
     const [formData, setFormData] = useState({ name: '', phone: '', email: '', password: 'officer123', role: 'Officer', departmentId: '' });
     const [secretKey, setSecretKey] = useState('');
@@ -58,7 +60,10 @@ const OfficerRegister = () => {
     };
 
     return (
-        <div className="flex items-center justify-center min-h-[calc(100vh-64px)] p-6 bg-slate-100">
+        <div className="flex flex-col items-center justify-center min-h-[calc(100vh-64px)] p-6 bg-slate-100">
+            <div className="w-full max-w-md mb-4 self-start sm:self-auto sm:ml-auto sm:mr-auto lg:ml-[calc(50%-224px)]">
+                <BackButton fallbackPath="/officer/login" />
+            </div>
             <div className="bg-white p-10 rounded-[2.5rem] shadow-2xl shadow-slate-200/50 w-full max-w-md border border-slate-200">
                 <div className="flex justify-center mb-6">
                     <div className="bg-blue-900 p-4 rounded-3xl text-white shadow-lg">

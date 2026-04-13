@@ -249,16 +249,43 @@ router.post('/', auth, async (req, res) => {
         // 1. AI Prediction
         try {
             const combinedInput = `${title} ${description}`;
-            console.log(`[POST /complaints] Requesting AI prediction for: "${combinedInput.substring(0, 50)}..."`);
-            const aiResponse = await axios.post(`${process.env.AI_SERVICE_URL}/predict`, {
-                text: combinedInput,
-                description: combinedInput
-            });
-            category = aiResponse.data.category;
-            priority = aiResponse.data.priority;
-            console.log(`[POST /complaints] AI Prediction Result: category="${category}", priority="${priority}"`);
+            console.log(`[POST /complaints] Requesting OpenAI prediction for: "${combinedInput.substring(0, 50)}..."`);
+            
+            const systemPrompt = `Classify the complaint into one of these categories: Water, Electricity, Road, Sanitation, Other.
+Also determine priority: Low, Medium, High, Emergency.
+Return ONLY JSON in this format:
+{
+  "category": "",
+  "priority": "",
+  "confidence": number
+}`;
+
+            const aiResponse = await axios.post(
+                'https://api.openai.com/v1/chat/completions',
+                {
+                    model: 'gpt-4o-mini',
+                    messages: [
+                        { role: 'system', content: systemPrompt },
+                        { role: 'user', content: `Complaint: ${combinedInput}` }
+                    ],
+                    temperature: 0.2,
+                    response_format: { type: 'json_object' }
+                },
+                {
+                    headers: {
+                        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    timeout: 4000
+                }
+            );
+
+            const parsedData = JSON.parse(aiResponse.data.choices[0].message.content);
+            category = parsedData.category;
+            priority = parsedData.priority;
+            console.log(`[POST /complaints] OpenAI Prediction Result: category="${category}", priority="${priority}", confidence="${parsedData.confidence}"`);
         } catch (aiErr) {
-            console.error("[POST /complaints] AI service error (non-fatal):", aiErr.message);
+            console.error("[POST /complaints] AI service error (fallback will be used):", aiErr.message);
         }
 
         // 1b. Local Classification Fallback

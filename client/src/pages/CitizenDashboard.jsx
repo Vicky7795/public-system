@@ -6,6 +6,8 @@ import {
     ChevronRight, MapPin, ClipboardList, CheckCircle2
 } from 'lucide-react';
 
+import BackButton from '../components/BackButton';
+
 const CitizenDashboard = () => {
     const [complaints, setComplaints] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -43,6 +45,7 @@ const CitizenDashboard = () => {
 
     return (
         <div className="container mx-auto p-4 sm:p-6 max-w-7xl animate-in fade-in duration-700">
+            <BackButton />
             {/* Header */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-12">
                 <div>
