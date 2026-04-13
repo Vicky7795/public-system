@@ -1,16 +1,5 @@
 services:
-  # 1. AI Service (Python)
-  - type: web
-    name: public-grievance-ai
-    runtime: python
-    rootDir: ai-model
-    buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app
-    envVars:
-      - key: PYTHON_VERSION
-        value: 3.9.0
-
-  # 2. Backend Server (Node.js)
+  # 1. Backend Server (Node.js)
   - type: web
     name: public-grievance-backend
     runtime: node
@@ -20,8 +9,8 @@ services:
     envVars:
       - key: MONGODB_URI
         value: mongodb+srv://nagarevivek206_db_user:7sEHEKssevVynHVB@cluster0.sqyv5qq.mongodb.net/pgrs?retryWrites=true&w=majority&appName=Cluster0
-      - key: AI_SERVICE_URL
-        value: https://public-grievance-ai.onrender.com
+      - key: OPENAI_API_KEY
+        value: "" # REQUIRED: Set this manually in Render Dashboard for AI routing to work
       - key: JWT_SECRET
         generateValue: true
       - key: GOOGLE_CLIENT_ID
@@ -29,7 +18,7 @@ services:
       - key: NODE_ENV
         value: production
 
-  # 3. Frontend (Static Site)
+  # 2. Frontend (Static Site)
   - type: static
     name: public-grievance-frontend
     runtime: static
@@ -38,7 +27,7 @@ services:
     publishDir: dist
     envVars:
       - key: VITE_API_URL
-        value: https://public-system-1.onrender.com/api
+        value: https://public-grievance-backend.onrender.com/api
     routes:
       - type: rewrite
         source: /*
