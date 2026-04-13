@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ShieldCheck, Cpu, BarChart3, Clock, ArrowRight, UserCircle, Briefcase } from 'lucide-react';
+import { ArrowRight, UserCircle, Briefcase } from 'lucide-react';
 import api from '../utils/api';
 import emblemWatermark from '../assets/emblem-watermark.png';
 
@@ -97,37 +97,6 @@ const LandingPage = () => {
                 </div>
             </section>
 
-            {/* Features / How It Works Section */}
-            <section className="py-24 bg-white px-6">
-                <div className="container mx-auto">
-                    <div className="text-center mb-20">
-                        <h2 className="text-4xl font-black text-slate-800 tracking-tight uppercase mb-4">How it works</h2>
-                        <div className="h-1.5 w-24 bg-govBlue mx-auto rounded-full"></div>
-                    </div>
-                    <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-                        <FeatureCard 
-                            icon={<Cpu className="text-blue-600" size={32} />} 
-                            title="AI Classification" 
-                            desc="Automatic routing to the correct government department via machine learning." 
-                        />
-                        <FeatureCard 
-                            icon={<ShieldCheck className="text-green-600" size={32} />} 
-                            title="Smart Priority" 
-                            desc="URGENCY detection based on AI analysis of complaint severity and type." 
-                        />
-                        <FeatureCard 
-                            icon={<Clock className="text-orange-600" size={32} />} 
-                            title="Real-time Tracking" 
-                            desc="Monitor the status of your grievance from submission to final resolution." 
-                        />
-                        <FeatureCard 
-                            icon={<BarChart3 className="text-purple-600" size={32} />} 
-                            title="Analytics Dashboard" 
-                            desc="Real-time insights and monitoring for department officials and admins." 
-                        />
-                    </div>
-                </div>
-            </section>
         </div>
     );
 };
@@ -138,13 +107,4 @@ const StatItem = ({ value, label }) => (
         <div className="text-slate-400 uppercase text-[10px] font-black tracking-[0.2em]">{label}</div>
     </div>
 );
-
-const FeatureCard = ({ icon, title, desc }) => (
-    <div className="bg-slate-50 p-8 rounded-3xl border border-slate-200 hover:bg-white hover:shadow-xl transition-all duration-300">
-        <div className="mb-6 bg-white w-fit p-4 rounded-2xl shadow-sm border border-slate-100">{icon}</div>
-        <h3 className="text-xl font-bold mb-3 text-slate-800">{title}</h3>
-        <p className="text-slate-500 text-sm leading-relaxed font-medium">{desc}</p>
-    </div>
-);
-
 export default LandingPage;
