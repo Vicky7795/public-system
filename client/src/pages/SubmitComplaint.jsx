@@ -42,28 +42,7 @@ const SubmitComplaint = () => {
         if (fileInputRef.current) fileInputRef.current.value = '';
     };
 
-    /* ── Reverse geocode (Nominatim) ───────────────────────── */
-    const reverseGeocode = async (lat, lng) => {
-        try {
-            const res = await fetch(
-                `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1`,
-                { headers: { 'Accept-Language': 'en', 'User-Agent': 'PGRS-App/1.0' } }
-            );
-            if (!res.ok) throw new Error('Nominatim error');
-            const json = await res.json();
-            const a = json.address || {};
-            const parts = [
-                a.road || a.pedestrian || a.footway,
-                a.suburb || a.neighbourhood || a.quarter,
-                a.city || a.town || a.village || a.county,
-                a.state,
-                a.country
-            ].filter(Boolean);
-            return parts.length > 0 ? parts.join(', ') : json.display_name;
-        } catch {
-            return null;
-        }
-    };
+    /* ── Geocoding relegated to Backend ──────────────────────── */
 
 
     /* ── GPS Geolocation with robust handling ─────────────────────── */
@@ -78,11 +57,10 @@ const SubmitComplaint = () => {
         // Don't clear existing location immediately, only on success or explicit retry
 
         navigator.geolocation.getCurrentPosition(
-            async ({ coords, timestamp }) => {
+            ({ coords, timestamp }) => {
                 try {
                     const { latitude: lat, longitude: lng, accuracy } = coords;
-                    const nominatimAddress = await reverseGeocode(lat, lng);
-                    const address = nominatimAddress || `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+                    const address = 'Resolving exact location...';
 
                     setLocation({
                         lat,

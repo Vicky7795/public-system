@@ -66,19 +66,18 @@ const auth = (req, res, next) => {
 
 // Keyword mapping: category key MUST exactly match department name in DB
 const CATEGORY_KEYWORDS = {
-    'Electricity Department': ['electr', 'power', 'voltage', 'light', 'energy', 'transformer', 'cut', 'bill', 'street light', 'streetlight', 'pole', 'current', 'wire', 'shock', 'short circuit', 'spark', 'bulb', 'lighting', 'electricity', 'fuse', 'meter'],
-    'Water Department': ['water', 'leak', 'pipeline', 'tanker', 'sewage', 'pipe', 'tap', 'drain', 'pressure', 'clog', 'burst', 'overflow', 'plumb', 'water supply', 'damaged pipe', 'broken pipe'],
+    'Transport': ['transport', 'traffic', 'bus', 'auto', 'vehicle', 'road accident', 'license', 'signal', 'crossing', 'parking', 'rickshaw', 'rto'],
+    'Agriculture': ['agriculture', 'agri', 'farm', 'crop', 'farmer', 'irrigation', 'pest', 'fertilizer', 'subsidy', 'harvest', 'soil', 'canal', 'livestock', 'farming'],
+    'Revenue': ['revenue', 'property tax', 'land record', 'certificate', 'mutation', 'caste', 'ration card', 'income', 'patwari', 'tehsil', 'tax'],
+    'Social': ['welfare', 'social', 'pension', 'ration', 'bpl', 'disabled', 'mnrega', 'aadhaar', 'scheme', 'poverty', 'orphan'],
+    'Police': ['police', 'crime', 'theft', 'robbery', 'law', 'order', 'fir', 'drug', 'harassment', 'safety', 'fight', 'steal', 'threat', 'cop'],
+    'Forest': ['forest', 'tree', 'wildlife', 'poach', 'mining', 'deforest', 'ecology', 'timber', 'nature', 'animal', 'reserve'],
+    'Water': ['water', 'leak', 'pipeline', 'tanker', 'sewage', 'pipe', 'tap', 'drain', 'pressure', 'clog', 'burst', 'overflow', 'plumb', 'water supply', 'damaged pipe', 'broken pipe'],
+    'Electricity': ['electr', 'power', 'voltage', 'light', 'energy', 'transformer', 'cut', 'bill', 'street light', 'streetlight', 'pole', 'current', 'wire', 'shock', 'short circuit', 'spark', 'bulb', 'lighting', 'electricity', 'fuse', 'meter'],
     'PWD': ['pwd', 'public works', 'road', 'pothole', 'bridge', 'pavement', 'highway', 'asphalt', 'tar', 'concrete', 'infrastructure', 'footpath'],
     'Municipal': ['municipal', 'garbage', 'sanit', 'waste', 'sewer', 'drain', 'clean', 'trash', 'dump', 'smell', 'mosquito', 'litter', 'plastic', 'sanitation'],
-    'Health Department': ['health', 'hospital', 'clinic', 'medical', 'disease', 'dengue', 'vaccine', 'medicine', 'doctor', 'nurse', 'ambulance', 'emergency', 'outbreak'],
-    'Education Department': ['education', 'school', 'teacher', 'student', 'scholarship', 'midday', 'exam', 'bench', 'class', 'college', 'uniform'],
-    'Agriculture Department': ['agriculture', 'agri', 'farm', 'crop', 'farmer', 'irrigation', 'pest', 'fertilizer', 'subsidy', 'harvest', 'soil', 'canal', 'livestock', 'farming'],
-    'Transport Department': ['transport', 'traffic', 'bus', 'auto', 'vehicle', 'road accident', 'license', 'signal', 'crossing', 'parking', 'rickshaw', 'rto'],
-    'Social Welfare': ['welfare', 'social', 'pension', 'ration', 'bpl', 'disabled', 'mnrega', 'aadhaar', 'scheme', 'poverty', 'orphan'],
-    'Police': ['police', 'crime', 'theft', 'robbery', 'law', 'order', 'fir', 'drug', 'harassment', 'safety', 'fight', 'steal', 'threat', 'cop'],
-    'Revenue Department': ['revenue', 'property tax', 'land record', 'certificate', 'mutation', 'caste', 'ration card', 'income', 'patwari', 'tehsil', 'tax'],
-    'Forest Department': ['forest', 'tree', 'wildlife', 'poach', 'mining', 'deforest', 'ecology', 'timber', 'nature', 'animal', 'reserve'],
-    'General': ['general', 'misc', 'other']
+    'Health': ['health', 'hospital', 'clinic', 'medical', 'disease', 'dengue', 'vaccine', 'medicine', 'doctor', 'nurse', 'ambulance', 'emergency', 'outbreak'],
+    'Education': ['education', 'school', 'teacher', 'student', 'scholarship', 'midday', 'exam', 'bench', 'class', 'college', 'uniform']
 };
 
 /**
@@ -86,24 +85,16 @@ const CATEGORY_KEYWORDS = {
  * Returns the most likely category based on keyword density.
  */
 const classifyTextByKeywords = (text) => {
-    let bestCategory = 'General';
+    let bestCategory = null;
     let maxMatches = 0;
     const lowerText = text.toLowerCase();
 
-    const results = [];
-
     for (const [category, keywords] of Object.entries(CATEGORY_KEYWORDS)) {
-        if (category === 'General') continue;
         let score = 0;
-        const matchedKeywords = [];
         for (const kw of keywords) {
             if (lowerText.includes(kw.toLowerCase())) {
                 score++;
-                matchedKeywords.push(kw);
             }
-        }
-        if (score > 0) {
-            results.push({ category, score, matchedKeywords });
         }
         if (score > maxMatches) {
             maxMatches = score;
@@ -111,14 +102,14 @@ const classifyTextByKeywords = (text) => {
         }
     }
 
-    console.log(`[Classification] Keyword Scores for "${text.substring(0, 50)}...":`, results);
+    console.log(`[Classification] Keyword fallback chose: ${bestCategory}`);
     return bestCategory;
 };
 
 // Smart department lookup: exact match first, then keyword fallback
 const findDepartmentForCategory = async (Department, category) => {
-    if (!category || category === 'General') {
-        console.log(`[Department Discovery] Category is "${category}". Skipping lookup.`);
+    if (!category) {
+        console.log(`[Department Discovery] Category is empty. Skipping lookup.`);
         return null;
     }
 
@@ -241,6 +232,33 @@ router.post('/', auth, async (req, res) => {
             hasLocation: !!location,
             address: location?.address
         });
+
+        // 0. Validate and Process Location payload
+        if (!location || (!location.address && (location.lat == null || location.lng == null))) {
+            return res.status(400).json({ message: "Valid location (GPS or manual address) is required." });
+        }
+
+        let resolvedLocation = { ...location };
+        if (location.lat != null && location.lng != null && location.address === 'Resolving exact location...') {
+            try {
+                const geoRes = await axios.get(
+                    `https://nominatim.openstreetmap.org/reverse?lat=${location.lat}&lon=${location.lng}&format=json&addressdetails=1`,
+                    { headers: { 'Accept-Language': 'en', 'User-Agent': 'PGRS-Backend/1.0' } }
+                );
+                const a = geoRes.data.address || {};
+                const parts = [
+                    a.road || a.pedestrian || a.footway,
+                    a.suburb || a.neighbourhood || a.quarter,
+                    a.city || a.town || a.village || a.county,
+                    a.state,
+                    a.country
+                ].filter(Boolean);
+                resolvedLocation.address = parts.length > 0 ? parts.join(', ') : geoRes.data.display_name;
+            } catch (err) {
+                console.error("[POST /complaints] Backend Reverse Geocoding Error:", err.message);
+                resolvedLocation.address = `${location.lat.toFixed(5)}, ${location.lng.toFixed(5)}`;
+            }
+        }
         let category = "General";
         let priority = "Medium";
         let departmentId = null;
@@ -251,12 +269,13 @@ router.post('/', auth, async (req, res) => {
             const combinedInput = `${title} ${description}`;
             console.log(`[POST /complaints] Requesting OpenAI prediction for: "${combinedInput.substring(0, 50)}..."`);
             
-            const systemPrompt = `Classify the complaint into one of these categories: Water, Electricity, Road, Sanitation, Other.
+            const systemPrompt = `Classify the complaint strictly into ONE of the following precise categories: Transport, Agriculture, Revenue, Social, Police, Forest, Water, Electricity, PWD, Municipal, Health, Education.
+Ensure you return ONLY one category from this exact list. No exceptions.
 Also determine priority: Low, Medium, High, Emergency.
 Return ONLY JSON in this format:
 {
-  "category": "",
-  "priority": "",
+  "category": "exact category string",
+  "priority": "Low | Medium | High | Emergency",
   "confidence": number
 }`;
 
@@ -289,15 +308,13 @@ Return ONLY JSON in this format:
         }
 
         // 1b. Local Classification Fallback
-        if (!category || category === "General") {
-            console.log(`[POST /complaints] AI returned "${category}". Triggering local keyword fallback...`);
+        if (!category) {
+            console.log(`[POST /complaints] AI did not return a valid category. Triggering local keyword fallback...`);
             const combinedText = `${title} ${description}`;
             const fallbackCategory = classifyTextByKeywords(combinedText);
-            if (fallbackCategory !== "General") {
+            if (fallbackCategory) {
                 category = fallbackCategory;
                 console.log(`[POST /complaints] Local Fallback adopted: "${category}"`);
-            } else {
-                console.log(`[POST /complaints] Local Fallback also returned "General".`);
             }
         }
 
@@ -305,13 +322,18 @@ Return ONLY JSON in this format:
         const Department = require('../models/Department');
         const User = require('../models/User');
 
-        const department = await findDepartmentForCategory(Department, category);
-        if (department) {
-            departmentId = department._id;
-            console.log(`Department matched: "${department.departmentName}" for AI category "${category}"`);
-        } else {
-            console.warn(`No department found for category "${category}". Complaint stays unassigned/Pending.`);
+        let department = null;
+        if (category) {
+            department = await findDepartmentForCategory(Department, category);
         }
+
+        if (!department) {
+            console.error(`[POST /complaints] Rejecting: Could not route "${category || 'undefined category'}" to a valid department.`);
+            return res.status(400).json({ message: "We could not automatically assign your grievance to a valid government department based on the details provided. Please rewrite with more specific details." });
+        }
+        
+        departmentId = department._id;
+        console.log(`Department matched: "${department.departmentName}"`);
 
         // 3. Auto-Assignment (Disabled to prioritize the Intel Pool flow)
         /*
@@ -338,7 +360,7 @@ Return ONLY JSON in this format:
             departmentId,
             priorityLevel: priority,
             assignedOfficerId,
-            location: location || {},
+            location: resolvedLocation,
             imageData: imageData || null,
             status: assignedOfficerId ? 'Assigned' : 'Pending',
             slaDeadline: getSlaDeadline(priority)
