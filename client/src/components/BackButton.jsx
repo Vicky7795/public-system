@@ -29,7 +29,7 @@ const BackButton = ({ fallbackPath, className = "" }) => {
                     else if (user?.role === 'Officer') navigate('/officer');
                     else if (user?.role === 'Admin') navigate('/admin');
                     else navigate('/');
-                } catch (e) {
+                } catch {
                     navigate('/');
                 }
             }

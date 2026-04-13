@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const isProduction = typeof window !== 'undefined' && !window.location.hostname.includes('localhost');
+
 const api = axios.create({
     baseURL: import.meta.env.VITE_API_URL || '/api',
 });

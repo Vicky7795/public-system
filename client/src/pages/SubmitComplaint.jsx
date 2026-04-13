@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../utils/api';
 import { Send, Image, MapPin, Loader2, CheckCircle2, X, Navigation, PenLine } from 'lucide-react';
-import axios from 'axios';
+
 import BackButton from '../components/BackButton';
 
 const SubmitComplaint = () => {
