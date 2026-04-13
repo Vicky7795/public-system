@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../utils/api';
 import { Send, Image, MapPin, Loader2, CheckCircle2, X, Navigation, PenLine } from 'lucide-react';
+import axios from 'axios';
 import BackButton from '../components/BackButton';
 
 const SubmitComplaint = () => {
@@ -54,13 +55,29 @@ const SubmitComplaint = () => {
         }
         setLocLoading(true);
         setLocError('');
-        // Don't clear existing location immediately, only on success or explicit retry
 
         navigator.geolocation.getCurrentPosition(
-            ({ coords, timestamp }) => {
+            async ({ coords, timestamp }) => {
                 try {
                     const { latitude: lat, longitude: lng, accuracy } = coords;
-                    const address = 'Resolving exact location...';
+                    
+                    // Client-side Reverse Geocoding using Nominatim
+                    const geoRes = await axios.get(
+                        `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1`,
+                        { headers: { 'Accept-Language': 'en' } }
+                    );
+
+                    const a = geoRes.data.address || {};
+                    const parts = [
+                        a.road || a.pedestrian || a.footway,
+                        a.suburb || a.neighbourhood || a.quarter,
+                        a.city || a.town || a.village || a.county,
+                        a.state,
+                        a.postcode,
+                        a.country
+                    ].filter(Boolean);
+                    
+                    const address = parts.length > 0 ? parts.join(', ') : geoRes.data.display_name;
 
                     setLocation({
                         lat,
@@ -69,8 +86,12 @@ const SubmitComplaint = () => {
                         accuracy: Math.round(accuracy),
                         timestamp: new Date(timestamp).toLocaleTimeString()
                     });
+                    
+                    // Automatically switch to manual to let user see/edit the resolved address
+                    setManualAddress(address);
                 } catch (err) {
-                    setLocError('Failed to process location. Please try again or type manually.');
+                    console.error("Geocoding error:", err);
+                    setLocError('Location detected but we could not resolve the address. Please enter it manually.');
                 } finally {
                     setLocLoading(false);
                 }
@@ -89,7 +110,7 @@ const SubmitComplaint = () => {
             {
                 enableHighAccuracy: true,
                 maximumAge: 0,
-                timeout: 15000 // 15s is usually enough for a modern device
+                timeout: 15000 
             }
         );
     };

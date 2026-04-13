@@ -234,31 +234,12 @@ router.post('/', auth, async (req, res) => {
         });
 
         // 0. Validate and Process Location payload
-        if (!location || (!location.address && (location.lat == null || location.lng == null))) {
-            return res.status(400).json({ message: "Valid location (GPS or manual address) is required." });
+        // The frontend now handles geocoding and provides a resolved address.
+        if (!location || !location.address) {
+            return res.status(400).json({ message: "Valid location address is required." });
         }
 
         let resolvedLocation = { ...location };
-        if (location.lat != null && location.lng != null && location.address === 'Resolving exact location...') {
-            try {
-                const geoRes = await axios.get(
-                    `https://nominatim.openstreetmap.org/reverse?lat=${location.lat}&lon=${location.lng}&format=json&addressdetails=1`,
-                    { headers: { 'Accept-Language': 'en', 'User-Agent': 'PGRS-Backend/1.0' } }
-                );
-                const a = geoRes.data.address || {};
-                const parts = [
-                    a.road || a.pedestrian || a.footway,
-                    a.suburb || a.neighbourhood || a.quarter,
-                    a.city || a.town || a.village || a.county,
-                    a.state,
-                    a.country
-                ].filter(Boolean);
-                resolvedLocation.address = parts.length > 0 ? parts.join(', ') : geoRes.data.display_name;
-            } catch (err) {
-                console.error("[POST /complaints] Backend Reverse Geocoding Error:", err.message);
-                resolvedLocation.address = `${location.lat.toFixed(5)}, ${location.lng.toFixed(5)}`;
-            }
-        }
         let category = null;
         let priority = "Medium";
         let departmentId = null;
