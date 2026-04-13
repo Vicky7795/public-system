@@ -6,6 +6,16 @@ require('dotenv').config({ path: path.join(__dirname, '.env') });
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Health Check Endpoint (Moved to top for verification)
+app.get('/health', (req, res) => {
+    res.json({
+        status: 'UP',
+        version: '1.2.0-stabilized',
+        database: mongoose.connection.readyState === 1 ? 'CONNECTED' : 'DISCONNECTED',
+        time: new Date().toISOString()
+    });
+});
+
 // Manual Bulletproof CORS Middleware 
 app.use((req, res, next) => {
     const origin = req.header('Origin');
@@ -44,18 +54,9 @@ app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/complaints', require('./routes/complaintRoutes'));
 app.use('/api/departments', require('./routes/departmentRoutes'));
 
-// Health Check Endpoint for Debugging
-app.get('/health', (req, res) => {
-    res.json({
-        status: 'UP',
-        database: mongoose.connection.readyState === 1 ? 'CONNECTED' : 'DISCONNECTED',
-        environment: process.env.NODE_ENV || 'not set',
-        time: new Date().toISOString()
-    });
-});
 
 app.get('/', (req, res) => {
-    res.send('AI Public Grievance API is running');
+    res.send('AI Public Grievance API is running (Version: 1.2.0-stabilized)');
 });
 
 // Final Rescue Error Handler
