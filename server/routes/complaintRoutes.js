@@ -200,7 +200,10 @@ router.get('/my', auth, async (req, res) => {
 router.get('/all', auth, async (req, res) => {
     try {
         if (req.user.role === 'Citizen') return res.status(403).json({ message: 'Access denied' });
-        const complaints = await Complaint.find().populate('userId', 'name phone').sort({ createdAt: -1 });
+        const complaints = await Complaint.find()
+            .populate('userId', 'name phone')
+            .populate('assignedOfficerId', 'name')
+            .sort({ createdAt: -1 });
         res.json(complaints);
     } catch (err) {
         res.status(500).json({ message: err.message });
@@ -378,9 +381,14 @@ Return ONLY JSON in this format:
             slaDeadline: getSlaDeadline(priority)
         });
         await newComplaint.save();
+        
+        // Populate for response
+        const populated = await Complaint.findById(newComplaint._id)
+            .populate('assignedOfficerId', 'name');
+
         console.log(`Grievance Saved: ${newComplaint.ticketId} | Cat: ${category} | Dept: ${department?.departmentName || 'None'} | Officer: ${assignedOfficerId ? 'Assigned' : 'Pool'}`);
 
-        const responseData = newComplaint.toObject();
+        const responseData = populated.toObject();
         if (department) {
             responseData.departmentName = department.departmentName;
         }
@@ -413,7 +421,8 @@ router.patch('/:id', auth, async (req, res) => {
         const updateData = {};
         if (status) updateData.status = status;
         if (officerId) updateData.assignedOfficerId = officerId;
-        const complaint = await Complaint.findByIdAndUpdate(req.params.id, updateData, { new: true });
+        const complaint = await Complaint.findByIdAndUpdate(req.params.id, updateData, { new: true })
+            .populate('assignedOfficerId', 'name');
         res.json(complaint);
     } catch (err) {
         res.status(500).json({ message: err.message });
