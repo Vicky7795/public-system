@@ -3,12 +3,22 @@
     "version": "1.0.0",
     "description": "Root package to manage all services",
     "scripts": {
+        "start": "node index.js",
         "install-all": "npm install --prefix client && npm install --prefix server",
         "dev:server": "npm run dev --prefix server",
         "dev:client": "npm run dev --prefix client",
         "dev": "concurrently \"npm run dev --prefix client\" \"npm run dev --prefix server\""
     },
     "dependencies": {
-        "concurrently": "^9.2.1"
+        "axios": "^1.13.5",
+        "bcryptjs": "^3.0.3",
+        "concurrently": "^9.2.1",
+        "cors": "^2.8.6",
+        "dotenv": "^17.3.1",
+        "express": "^5.2.1",
+        "google-auth-library": "^10.6.1",
+        "jsonwebtoken": "^9.0.3",
+        "mongoose": "^9.2.2",
+        "openai": "^6.34.0"
     }
 }
