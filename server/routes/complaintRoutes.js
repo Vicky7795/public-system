@@ -259,17 +259,22 @@ router.post('/', auth, async (req, res) => {
                 resolvedLocation.address = `${location.lat.toFixed(5)}, ${location.lng.toFixed(5)}`;
             }
         }
-        let category = "General";
+        let category = null;
         let priority = "Medium";
         let departmentId = null;
         let assignedOfficerId = null;
 
-        // 1. AI Prediction
-        try {
-            const combinedInput = `${title} ${description}`;
-            console.log(`[POST /complaints] Requesting OpenAI prediction for: "${combinedInput.substring(0, 50)}..."`);
-            
-            const systemPrompt = `Classify the complaint strictly into ONE of the following precise categories: Transport, Agriculture, Revenue, Social, Police, Forest, Water, Electricity, PWD, Municipal, Health, Education.
+        const combinedInput = `${title} ${description}`;
+
+        // 1. Primary: Local Keyword Classification
+        console.log(`[POST /complaints] Running primary Keyword classification...`);
+        category = classifyTextByKeywords(combinedInput);
+
+        // 2. Secondary: AI Prediction Fallback
+        if (!category) {
+            console.log(`[POST /complaints] Keyword classification yielded no match. Triggering AI Fallback...`);
+            try {
+                const systemPrompt = `Classify the complaint strictly into ONE of the following precise categories: Transport, Agriculture, Revenue, Social, Police, Forest, Water, Electricity, PWD, Municipal, Health, Education.
 Ensure you return ONLY one category from this exact list. No exceptions.
 Also determine priority: Low, Medium, High, Emergency.
 Return ONLY JSON in this format:
@@ -279,43 +284,35 @@ Return ONLY JSON in this format:
   "confidence": number
 }`;
 
-            const aiResponse = await axios.post(
-                'https://api.openai.com/v1/chat/completions',
-                {
-                    model: 'gpt-4o-mini',
-                    messages: [
-                        { role: 'system', content: systemPrompt },
-                        { role: 'user', content: `Complaint: ${combinedInput}` }
-                    ],
-                    temperature: 0.2,
-                    response_format: { type: 'json_object' }
-                },
-                {
-                    headers: {
-                        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
-                        'Content-Type': 'application/json'
+                const aiResponse = await axios.post(
+                    'https://api.openai.com/v1/chat/completions',
+                    {
+                        model: 'gpt-4o-mini',
+                        messages: [
+                            { role: 'system', content: systemPrompt },
+                            { role: 'user', content: `Complaint: ${combinedInput}` }
+                        ],
+                        temperature: 0.2,
+                        response_format: { type: 'json_object' }
                     },
-                    timeout: 4000
-                }
-            );
+                    {
+                        headers: {
+                            'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+                            'Content-Type': 'application/json'
+                        },
+                        timeout: 4000
+                    }
+                );
 
-            const parsedData = JSON.parse(aiResponse.data.choices[0].message.content);
-            category = parsedData.category;
-            priority = parsedData.priority;
-            console.log(`[POST /complaints] OpenAI Prediction Result: category="${category}", priority="${priority}", confidence="${parsedData.confidence}"`);
-        } catch (aiErr) {
-            console.error("[POST /complaints] AI service error (fallback will be used):", aiErr.message);
-        }
-
-        // 1b. Local Classification Fallback
-        if (!category) {
-            console.log(`[POST /complaints] AI did not return a valid category. Triggering local keyword fallback...`);
-            const combinedText = `${title} ${description}`;
-            const fallbackCategory = classifyTextByKeywords(combinedText);
-            if (fallbackCategory) {
-                category = fallbackCategory;
-                console.log(`[POST /complaints] Local Fallback adopted: "${category}"`);
+                const parsedData = JSON.parse(aiResponse.data.choices[0].message.content);
+                category = parsedData.category;
+                priority = parsedData.priority || "Medium";
+                console.log(`[POST /complaints] OpenAI Prediction Result: category="${category}", priority="${priority}", confidence="${parsedData.confidence}"`);
+            } catch (aiErr) {
+                console.error("[POST /complaints] AI service fallback error:", aiErr.message);
             }
+        } else {
+            console.log(`[POST /complaints] Keyword classification assigned category: "${category}"`);
         }
 
         // 2. Smart Department Resolution

@@ -92,6 +92,7 @@ const CitizenLogin = () => {
                                 <Mail className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 transition-colors group-focus-within:text-govBlue" size={20} />
                                 <input
                                     type="email" required
+                                    autoComplete="username"
                                     className="w-full pl-14 pr-6 py-5 rounded-2xl bg-white/50 border-2 border-transparent focus:border-govBlue focus:bg-white outline-none transition-all font-semibold text-slate-700 placeholder:text-slate-300 shadow-inner"
                                     placeholder="yourname@domain.gov"
                                     value={formData.email}
@@ -106,6 +107,7 @@ const CitizenLogin = () => {
                                 <Lock className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 transition-colors group-focus-within:text-govBlue" size={20} />
                                 <input
                                     type="password" required
+                                    autoComplete="current-password"
                                     className="w-full pl-14 pr-6 py-5 rounded-2xl bg-white/50 border-2 border-transparent focus:border-govBlue focus:bg-white outline-none transition-all font-semibold text-slate-700 placeholder:text-slate-300 shadow-inner"
                                     placeholder="••••••••"
                                     value={formData.password}

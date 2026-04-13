@@ -63,6 +63,7 @@ const OfficerLogin = () => {
                             <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
                             <input
                                 type="email" required
+                                autoComplete="username"
                                 className="w-full pl-12 pr-5 py-4 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-slate-900 focus:bg-white outline-none transition-all font-medium text-slate-700"
                                 placeholder="officer@nic.in"
                                 value={formData.email}
@@ -76,6 +77,7 @@ const OfficerLogin = () => {
                             <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
                             <input
                                 type="password" required
+                                autoComplete="current-password"
                                 className="w-full pl-12 pr-5 py-4 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-slate-900 focus:bg-white outline-none transition-all font-medium text-slate-700"
                                 placeholder="••••••••"
                                 value={formData.password}
