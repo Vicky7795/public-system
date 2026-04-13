@@ -61,23 +61,12 @@ const SubmitComplaint = () => {
                 try {
                     const { latitude: lat, longitude: lng, accuracy } = coords;
                     
-                    // Client-side Reverse Geocoding using Nominatim
-                    const geoRes = await axios.get(
-                        `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1`,
-                        { headers: { 'Accept-Language': 'en' } }
+                    // Call backend proxy for Reverse Geocoding to bypass CORS
+                    const geoRes = await api.get(
+                        `/complaints/reverse-geocode?lat=${lat}&lng=${lng}`
                     );
 
-                    const a = geoRes.data.address || {};
-                    const parts = [
-                        a.road || a.pedestrian || a.footway,
-                        a.suburb || a.neighbourhood || a.quarter,
-                        a.city || a.town || a.village || a.county,
-                        a.state,
-                        a.postcode,
-                        a.country
-                    ].filter(Boolean);
-                    
-                    const address = parts.length > 0 ? parts.join(', ') : geoRes.data.display_name;
+                    const address = geoRes.data.address;
 
                     setLocation({
                         lat,

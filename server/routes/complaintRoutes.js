@@ -51,6 +51,40 @@ router.get('/public-stats', async (req, res) => {
     }
 });
 
+/**
+ * @route   GET /api/complaints/reverse-geocode
+ * @desc    Backend proxy to solve CORS issues with Nominatim
+ */
+router.get('/reverse-geocode', async (req, res) => {
+    const { lat, lng } = req.query;
+    if (!lat || !lng) {
+        return res.status(400).json({ message: "Latitude and Longitude are required." });
+    }
+
+    try {
+        const geoRes = await axios.get(
+            `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1`,
+            { headers: { 'Accept-Language': 'en', 'User-Agent': 'PGRS-Backend/1.0' } }
+        );
+
+        const a = geoRes.data.address || {};
+        const parts = [
+            a.road || a.pedestrian || a.footway,
+            a.suburb || a.neighbourhood || a.quarter,
+            a.city || a.town || a.village || a.county,
+            a.state,
+            a.postcode,
+            a.country
+        ].filter(Boolean);
+
+        const address = parts.length > 0 ? parts.join(', ') : geoRes.data.display_name;
+        res.json({ address, display_name: geoRes.data.display_name, raw: geoRes.data });
+    } catch (err) {
+        console.error("[Backend Geocode Proxy] Error:", err.message);
+        res.status(502).json({ message: "Failed to resolve address from coordinate provider." });
+    }
+});
+
 // Middleware to verify JWT
 const auth = (req, res, next) => {
     const token = req.header('Authorization');
