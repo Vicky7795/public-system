@@ -67,7 +67,7 @@ app.use('/api/departments', require('./routes/departmentRoutes'));
 if (process.env.NODE_ENV === 'production') {
     app.use(express.static(path.join(__dirname, '../client/dist')));
 
-    app.get('*', (req, res) => {
+    app.get('(.*)', (req, res) => {
         // Exclude /api routes from static serving to let them 404 naturally
         if (!req.path.startsWith('/api')) {
             res.sendFile(path.join(__dirname, '../client/dist/index.html'));
