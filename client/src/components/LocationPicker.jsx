@@ -96,6 +96,14 @@ const LocationPicker = ({ onLocationSelect, initialLocation }) => {
     const markerRef    = useRef(null);
     const searchTimer  = useRef(null);
 
+    /* ── Stop watchPosition ── */
+    const stopWatch = useCallback(() => {
+        if (watchIdRef.current !== null) {
+            navigator.geolocation.clearWatch(watchIdRef.current);
+            watchIdRef.current = null;
+        }
+    }, []);
+
     /* ── Cleanup ── */
     useEffect(() => {
         return () => {
@@ -114,14 +122,6 @@ const LocationPicker = ({ onLocationSelect, initialLocation }) => {
             setPhase('map');
         }
     }, [initialLocation]);
-
-    /* ── Stop watchPosition ── */
-    const stopWatch = useCallback(() => {
-        if (watchIdRef.current !== null) {
-            navigator.geolocation.clearWatch(watchIdRef.current);
-            watchIdRef.current = null;
-        }
-    }, []);
 
     /* ── Reverse geocode (debounced 600ms) ── */
     const geocode = useCallback((lat, lng) => {
