@@ -396,6 +396,7 @@ router.post('/', auth, async (req, res) => {
         let translatedDescription = description;
 
         const combinedInput = `${title} ${description}`;
+        const hasAI = !!process.env.OPENAI_API_KEY;
 
         // 1. Classification & Translation
         // If English, try local keyword matching first to save API calls
@@ -403,8 +404,8 @@ router.post('/', auth, async (req, res) => {
             category = classifyTextByKeywords(combinedInput);
         }
 
-        // If not English, or if English keyword matching failed, route to AI
-        if (!category || language !== 'en') {
+        // If not English, or if English keyword matching failed, try AI (ONLY IF KEY EXISTS)
+        if ((!category || language !== 'en') && hasAI) {
             try {
                 const systemPrompt = `You are an expert civic grievance analyzer and translator.
 1. Strictly classify the complaint into ONE of these precise categories: Transport, Agriculture, Revenue, Social, Police, Forest, Water, Electricity, PWD, Municipal, Health, Education.
@@ -438,9 +439,14 @@ Return ONLY JSON: { "category": "category string", "priority": "priority string"
                 translatedTitle = parsedData.translatedTitle || title;
                 translatedDescription = parsedData.translatedDescription || description;
             } catch (aiErr) {
-                console.error("[POST /complaints] AI translation/classification fallback error:", aiErr.message);
-                category = category || "General"; // Ultimate fallback
+                console.error("[POST /complaints] AI failure during active mode:", aiErr.message);
+                // Fallback to local keywords since AI call failed
+                category = category || classifyTextByKeywords(combinedInput);
             }
+        } else if (!hasAI) {
+            // FORCE FREE MODE
+            console.log("[MODE] Grievance processed in FREE MODE (Key missing)");
+            category = category || classifyTextByKeywords(combinedInput);
         }
 
         // 2. Department Resolution
