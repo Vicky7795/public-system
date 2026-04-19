@@ -3,14 +3,27 @@ import { Link, useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 import {
     Plus, Search, Calendar, Filter, Radar, FileText,
-    ChevronRight, MapPin, ClipboardList, CheckCircle2
+    ChevronRight, MapPin, ClipboardList, CheckCircle2,
+    ShieldCheck, Building2, ArrowRight, X
 } from 'lucide-react';
 
 import BackButton from '../components/BackButton';
+import NotificationCenter from '../components/NotificationCenter';
+import LanguageSwitcher from '../components/LanguageSwitcher';
+import { useTranslation } from 'react-i18next';
 
 const CitizenDashboard = () => {
+    const { t } = useTranslation();
     const [complaints, setComplaints] = useState([]);
+    const [departments, setDepartments] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [debouncedSearch, setDebouncedSearch] = useState('');
+    const [statusFilter, setStatusFilter] = useState('All');
+    const [categoryFilter, setCategoryFilter] = useState('All');
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 8;
+
     let user = null;
     try { user = JSON.parse(localStorage.getItem('user')); } catch { user = null; }
     const navigate = useNavigate();
@@ -23,111 +36,238 @@ const CitizenDashboard = () => {
     }, [navigate, user]);
 
     useEffect(() => {
-        const fetchComplaints = async () => {
+        const fetchData = async () => {
             try {
-                const { data } = await api.get('/complaints/my');
-                setComplaints(data);
-            } catch {
-                alert('Failed to load your complaints. Please check your connection.');
+                const [complaintsRes, departmentsRes] = await Promise.all([
+                    api.get('/complaints/my'),
+                    api.get('/departments')
+                ]);
+                setComplaints(complaintsRes.data);
+                setDepartments(departmentsRes.data);
+            } catch (err) {
+                console.error("Dashboard data fetch error:", err);
             } finally {
                 setLoading(false);
             }
         };
-        fetchComplaints();
+        fetchData();
     }, []);
 
+    useEffect(() => {
+        const handler = setTimeout(() => setDebouncedSearch(searchTerm), 300);
+        return () => clearTimeout(handler);
+    }, [searchTerm]);
+
+    // Filter Logic
+    const filteredComplaints = complaints.filter(c => {
+        if (!c) return false;
+        const q = debouncedSearch.toLowerCase().trim();
+        const matchesSearch = c.ticketId?.toLowerCase().includes(q) || 
+                             c.title?.toLowerCase().includes(q) ||
+                             c.category?.toLowerCase().includes(q) ||
+                             c.description?.toLowerCase().includes(q);
+        const matchesStatus = statusFilter === 'All' || c.status === statusFilter;
+        const matchesCategory = categoryFilter === 'All' || c.category === categoryFilter;
+        return (q ? matchesSearch : true) && matchesStatus && matchesCategory;
+    });
+
+    // Pagination Logic
+    const totalPages = Math.ceil(filteredComplaints.length / itemsPerPage);
+    const currentItems = filteredComplaints.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
     if (loading) return (
-        <div className="flex flex-col h-[80vh] items-center justify-center gap-4">
-            <div className="w-12 h-12 border-4 border-govBlue/20 border-t-govBlue rounded-full animate-spin" />
-            <p className="text-slate-400 font-black text-[10px] uppercase tracking-[0.3em]">Syncing Data...</p>
+        <div className="flex flex-col h-[80vh] items-center justify-center gap-4 bg-[#F9FAFB]">
+            <div className="w-10 h-10 border-4 border-slate-200 border-t-[#1D4ED8] rounded-full animate-spin" />
+            <p className="text-slate-500 font-bold text-xs uppercase tracking-widest">Loading Official Data...</p>
         </div>
     );
 
     return (
-        <div className="container mx-auto p-4 sm:p-6 max-w-7xl animate-in fade-in duration-700">
-            <BackButton />
-            {/* Header */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-12">
-                <div>
-                    <div className="flex items-center gap-2 mb-2">
-                        <span className="h-1 w-8 bg-govBlue rounded-full"></span>
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Citizen Portal</p>
+        <div className="min-h-screen bg-[#F9FAFB] pb-20">
+            {/* Top Branding Bar */}
+            <div className="bg-white border-b border-gray-200 py-3 mb-8">
+                <div className="container mx-auto px-6 max-w-7xl flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <BackButton />
+                        <div className="w-px h-6 bg-gray-200 mx-2 hidden sm:block" />
+                        <span className="text-[12px] font-bold text-gray-500 uppercase tracking-widest hidden sm:block">Citizen Portal • v2.0</span>
                     </div>
-                    <h1 className="text-4xl font-black text-slate-900 tracking-tighter leading-none mb-2">Welcome, {user?.name}</h1>
-                    <p className="text-slate-500 font-bold text-sm">Real-time tracking of your reported grievances</p>
+                    <div className="flex items-center gap-4">
+                        <NotificationCenter />
+                        <LanguageSwitcher />
+                        <div className="w-px h-6 bg-gray-200 mx-1 hidden sm:block" />
+                        <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 text-[#1D4ED8] rounded-lg border border-blue-100">
+                            <ShieldCheck size={14} />
+                            <span className="text-[10px] font-black uppercase tracking-wider">{t('dashboard.secured_session')}</span>
+                        </div>
+                    </div>
                 </div>
-                <div className="flex gap-3 w-full md:w-auto">
-                    <Link to="/track" className="flex-1 md:flex-none border-2 border-slate-200 text-slate-600 px-6 py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-slate-50 active:scale-95 transition-all shadow-sm">
-                        <Radar size={18} /> Track
-                    </Link>
-                    <Link to="/submit" className="flex-1 md:flex-none bg-govBlue text-white px-8 py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 hover:shadow-2xl hover:shadow-blue-200 active:scale-95 transition-all shadow-xl shadow-blue-100">
-                        <Plus size={18} /> New Report
-                    </Link>
+            </div>
+
+            <div className="container mx-auto px-6 max-w-7xl animate-in fade-in duration-500">
+                {/* Header & Main Actions */}
+                <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-10">
+                    <div>
+                        <h1 className="text-2xl sm:text-3xl font-bold text-[#111827] mb-2 font-['Plus_Jakarta_Sans',sans-serif]">{t('dashboard.welcome')}, {user?.name}</h1>
+                        <p className="text-sm text-gray-500 font-medium">Manage and track your official grievances through the secure portal.</p>
+                    </div>
+                    <div className="flex gap-3 w-full lg:w-auto">
+                        <Link to="/track" className="flex-1 lg:flex-none bg-white border border-gray-300 text-gray-700 px-6 py-3 rounded-lg font-bold text-sm hover:bg-gray-50 transition-all flex items-center justify-center gap-2 shadow-sm">
+                            <Search size={18} /> {t('dashboard.track_complaint')}
+                        </Link>
+                        <Link to="/submit" className="flex-1 lg:flex-none bg-[#1D4ED8] text-white px-6 py-3 rounded-lg font-bold text-sm hover:bg-[#1e40af] transition-all flex items-center justify-center gap-2 shadow-sm">
+                            <Plus size={18} /> {t('dashboard.file_complaint')}
+                        </Link>
+                    </div>
                 </div>
-            </div>
 
-            {/* Stats */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-12">
-                <StatCard label="Total Filed" value={complaints.length} color="blue" icon={<Search size={20} />} />
-                <StatCard label="In Progress" value={complaints.filter(c => c.status === 'In Progress').length} color="orange" icon={<Calendar size={14} />} />
-                <StatCard label="Resolved" value={complaints.filter(c => c.status === 'Resolved').length} color="green" icon={<CheckCircle2 size={20} />} />
-            </div>
+                {/* Summary Metrics */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-10">
+                    <SummaryCard label="Total Grievances" value={complaints.length} color="blue" icon={<ClipboardList size={24} />} />
+                    <SummaryCard label="In-Progress" value={complaints.filter(c => c.status === 'In Progress').length} color="orange" icon={<Calendar size={24} />} />
+                    <SummaryCard label="Resolved Actions" value={complaints.filter(c => c.status === 'Resolved').length} color="green" icon={<CheckCircle2 size={24} />} />
+                </div>
 
-            {/* List Header */}
-            <div className="flex items-center justify-between mb-6 border-b border-slate-100 pb-4">
-                <h2 className="text-sm font-black text-slate-900 uppercase tracking-[0.2em] flex items-center gap-2">
-                    <ClipboardList size={18} className="text-govBlue" /> Recent History
-                </h2>
-            </div>
+                {/* Filters Row */}
+                <div className="bg-white border border-gray-200 rounded-xl p-4 mb-6 shadow-sm flex flex-col lg:flex-row gap-4">
+                    <div className="flex-1 relative flex items-center">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                        <input 
+                            type="text"
+                            placeholder={t('dashboard.search')}
+                            className="w-full pl-10 pr-10 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:bg-white focus:border-[#1D4ED8] focus:ring-1 focus:ring-[#1D4ED8] outline-none transition-all"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                        {searchTerm && (
+                            <button onClick={() => setSearchTerm('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors">
+                                <X size={16} />
+                            </button>
+                        )}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-4">
+                        <div className="text-[11px] font-bold text-gray-400 uppercase tracking-wide">
+                            {filteredComplaints.length} Result{filteredComplaints.length !== 1 ? 's' : ''} found
+                        </div>
+                        <select 
+                            className="px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:bg-white outline-none font-medium text-gray-700"
+                            value={statusFilter}
+                            onChange={(e) => setStatusFilter(e.target.value)}
+                        >
+                            <option value="All">All Statuses</option>
+                            <option value="Pending">Pending</option>
+                            <option value="In Progress">In Progress</option>
+                            <option value="Resolved">Resolved</option>
+                        </select>
+                        <select 
+                            className="px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:bg-white outline-none font-medium text-gray-700"
+                            value={categoryFilter}
+                            onChange={(e) => setCategoryFilter(e.target.value)}
+                        >
+                            <option value="All">All Departments</option>
+                            {departments.map(d => (
+                                <option key={d._id} value={d.departmentName}>{d.departmentName}</option>
+                            ))}
+                        </select>
+                    </div>
+                </div>
 
-            {/* Complaints List/Cards */}
-            <div className="space-y-4">
-                {complaints.length > 0 ? (
-                    <div className="grid grid-cols-1 gap-4">
-                        {complaints.map((c) => (
-                            <div
-                                key={c._id}
-                                onClick={() => navigate('/track', { state: { prefill: c.ticketId } })}
-                                className="group bg-white rounded-3xl p-5 sm:p-6 border border-slate-100 hover:border-govBlue/20 hover:shadow-2xl hover:shadow-slate-200/50 transition-all cursor-pointer flex flex-col sm:flex-row items-start sm:items-center gap-6"
-                            >
-                                <div className="hidden sm:flex w-14 h-14 bg-slate-50 rounded-2xl items-center justify-center text-slate-300 group-hover:bg-blue-50 group-hover:text-govBlue transition-colors shadow-inner">
-                                    <FileText size={24} />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex flex-wrap items-center gap-2 mb-2">
-                                        <span className="font-mono text-[10px] font-black bg-slate-100 px-2 py-0.5 rounded text-slate-500 uppercase">#{c.ticketId}</span>
-                                        <span className="text-[10px] font-black px-2 py-0.5 bg-blue-50 text-govBlue rounded uppercase tracking-wider">{c.category}</span>
-                                        <span className={`text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-wider ${(c.priorityLevel || c.priority) === 'High' ? 'bg-red-50 text-red-500' : 'bg-orange-50 text-orange-500'}`}>
-                                            {c.priorityLevel || c.priority || 'Medium'}
+                {/* Grievance Table/List */}
+                <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+                    {/* Desktop Table Header */}
+                    <div className="hidden lg:grid grid-cols-12 bg-gray-50 border-b border-gray-200 px-6 py-4">
+                        <div className="col-span-2 text-[11px] font-bold text-gray-400 uppercase tracking-wider">Ticket ID</div>
+                        <div className="col-span-4 text-[11px] font-bold text-gray-400 uppercase tracking-wider">Subject & Department</div>
+                        <div className="col-span-2 text-[11px] font-bold text-gray-400 uppercase tracking-wider">Priority</div>
+                        <div className="col-span-2 text-[11px] font-bold text-gray-400 uppercase tracking-wider">Status</div>
+                        <div className="col-span-2 text-right text-[11px] font-bold text-gray-400 uppercase tracking-wider">Actions</div>
+                    </div>
+
+                    <div className="divide-y divide-gray-100">
+                        {currentItems.length > 0 ? (
+                            currentItems.map((c) => (
+                                <div key={c._id} className="lg:grid lg:grid-cols-12 items-center px-6 py-5 hover:bg-gray-50/50 transition-colors group">
+                                    {/* Mobile/Shared Header */}
+                                    <div className="col-span-2 mb-3 lg:mb-0">
+                                        <span className="font-mono text-[12px] font-bold text-[#1D4ED8] bg-blue-50 px-2 py-1 rounded">#{c.ticketId}</span>
+                                        <p className="text-[11px] text-gray-400 font-medium mt-1 uppercase lg:hidden">{new Date(c.createdAt).toLocaleDateString()}</p>
+                                    </div>
+
+                                    {/* Subject */}
+                                    <div className="col-span-4 mb-4 lg:mb-0">
+                                        <h3 className="text-sm font-bold text-gray-900 group-hover:text-[#1D4ED8] transition-colors line-clamp-1">{c.title}</h3>
+                                        <div className="flex items-center gap-2 mt-1">
+                                            <span className="text-[11px] font-semibold text-gray-500 flex items-center gap-1">
+                                                <Building2 size={12} /> {c.category}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    {/* Priority */}
+                                    <div className="col-span-2 mb-4 lg:mb-0">
+                                        <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-tight
+                                            ${(c.priorityLevel || c.priority) === 'High' ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-gray-50 text-gray-600 border border-gray-100'}`}>
+                                            {(c.priorityLevel || c.priority || 'Medium')}
                                         </span>
                                     </div>
-                                    <h3 className="text-lg font-black text-slate-800 mb-1 leading-snug group-hover:text-govBlue transition-colors truncate">{c.title}</h3>
-                                    <div className="flex items-center gap-4 text-xs font-bold text-slate-400">
-                                        <span className="flex items-center gap-1.5"><Calendar size={14} /> {new Date(c.createdAt).toLocaleDateString()}</span>
-                                        <span className="hidden sm:flex items-center gap-1.5 truncate max-w-[200px]"><MapPin size={14} /> {c.location?.address || 'No Location'}</span>
-                                    </div>
-                                </div>
-                                <div className="w-full sm:w-auto flex items-center justify-between sm:justify-end gap-6 pt-4 sm:pt-0 border-t sm:border-0 border-slate-50">
-                                    <div className="flex flex-col items-end">
-                                        <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border-2 ${c.status === 'Resolved' ? 'bg-green-50 text-green-600 border-green-100' :
-                                            c.status === 'In Progress' ? 'bg-orange-50 text-orange-600 border-orange-100' :
-                                                'bg-slate-50 text-slate-500 border-slate-100'
-                                            }`}>
+
+                                    {/* Status */}
+                                    <div className="col-span-2 mb-6 lg:mb-0">
+                                        <span className={`inline-flex items-center gap-1.5 text-[11px] font-bold
+                                            ${c.status === 'Resolved' ? 'text-green-600' : c.status === 'In Progress' ? 'text-orange-600' : 'text-gray-500'}`}>
+                                            <div className={`w-1.5 h-1.5 rounded-full ${c.status === 'Resolved' ? 'bg-green-600' : c.status === 'In Progress' ? 'bg-orange-600' : 'bg-gray-400'}`} />
                                             {c.status}
                                         </span>
                                     </div>
-                                    <div className="p-2 bg-slate-50 rounded-xl group-hover:bg-govBlue group-hover:text-white transition-all">
-                                        <ChevronRight size={18} />
+
+                                    {/* Actions */}
+                                    <div className="col-span-2 flex justify-end">
+                                        <button 
+                                            onClick={() => navigate('/track', { state: { prefill: c.ticketId } })}
+                                            className="px-4 py-2 border border-gray-200 text-gray-600 rounded-lg text-xs font-bold hover:bg-gray-100 hover:text-[#111827] transition-all flex items-center gap-2"
+                                        >
+                                            View Details <ArrowRight size={14} />
+                                        </button>
                                     </div>
                                 </div>
+                            ))
+                        ) : (
+                            <div className="py-20 text-center">
+                                <Search size={40} className="mx-auto text-gray-200 mb-4" />
+                                <h3 className="text-lg font-bold text-gray-900">No matching grievances</h3>
+                                <p className="text-sm text-gray-500 max-w-xs mx-auto">We couldn't find any records matching your search or filter criteria.</p>
                             </div>
-                        ))}
+                        )}
                     </div>
-                ) : (
-                    <div className="text-center py-24 bg-slate-50 rounded-[3rem] border-2 border-dashed border-slate-200">
-                        <Plus size={48} className="mx-auto text-slate-200 mb-4" />
-                        <h3 className="text-xl font-black text-slate-800 mb-2">No grievances found</h3>
-                        <p className="text-slate-400 font-bold max-w-xs mx-auto text-sm">You haven't filed any complaints yet. Your history will appear here.</p>
+                </div>
+
+                {/* Pagination Controls */}
+                {totalPages > 1 && (
+                    <div className="mt-8 flex items-center justify-between bg-white border border-gray-200 rounded-xl px-6 py-4 shadow-sm">
+                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest">
+                            Showing <span className="text-[#1D4ED8]">{currentItems.length}</span> of <span className="text-gray-900">{filteredComplaints.length}</span> records
+                        </p>
+                        <div className="flex gap-2">
+                            <button 
+                                disabled={currentPage === 1}
+                                onClick={() => setCurrentPage(p => p - 1)}
+                                className="px-4 py-2 border border-gray-200 rounded-lg text-xs font-bold disabled:opacity-30 hover:bg-gray-50 transition-all hover:border-gray-300"
+                            >
+                                Previous
+                            </button>
+                            <div className="flex items-center gap-1 px-4">
+                                <span className="text-xs font-bold text-gray-900">{currentPage}</span>
+                                <span className="text-xs font-bold text-gray-400">/</span>
+                                <span className="text-xs font-bold text-gray-400">{totalPages}</span>
+                            </div>
+                            <button 
+                                disabled={currentPage === totalPages}
+                                onClick={() => setCurrentPage(p => p + 1)}
+                                className="px-4 py-2 border border-gray-200 rounded-lg text-xs font-bold disabled:opacity-30 hover:bg-gray-50 transition-all hover:border-gray-300"
+                            >
+                                Next
+                            </button>
+                        </div>
                     </div>
                 )}
             </div>
@@ -135,20 +275,23 @@ const CitizenDashboard = () => {
     );
 };
 
-const StatCard = ({ label, value, color, icon }) => {
-    const colors = {
-        blue: 'bg-blue-50 text-blue-600 border-blue-100',
-        orange: 'bg-orange-50 text-orange-600 border-orange-100',
-        green: 'bg-green-50 text-green-600 border-green-100',
+const SummaryCard = ({ label, value, color, icon }) => {
+    const configs = {
+        blue: { border: 'border-l-[#1D4ED8]', text: 'text-[#1D4ED8]' },
+        orange: { border: 'border-l-[#EA580C]', text: 'text-[#EA580C]' },
+        green: { border: 'border-l-[#16A34A]', text: 'text-[#16A34A]' }
     };
+
     return (
-        <div className={`p-8 rounded-[2rem] border-2 shadow-sm bg-white hover:shadow-xl hover:-translate-y-1 transition-all group overflow-hidden relative`}>
-            <div className={`absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 group-hover:opacity-10 transition-all ${colors[color].split(' ')[1]}`}>
-                {React.cloneElement(icon, { size: 64 })}
-            </div>
-            <div className="relative z-10 flex flex-col justify-center h-full">
-                <div className="text-slate-400 font-black text-[10px] uppercase tracking-[0.25em] mb-2">{label}</div>
-                <div className={`text-4xl font-black ${colors[color].split(' ')[1]} tracking-tighter`}>{value}</div>
+        <div className={`bg-white border border-gray-200 ${configs[color].border} border-l-4 p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow relative overflow-hidden`}>
+            <div className="flex items-center justify-between">
+                <div>
+                    <p className="text-[11px] font-bold text-gray-400 uppercase tracking-[0.1em] mb-1">{label}</p>
+                    <h4 className="text-3xl font-bold text-gray-900 leading-none">{value}</h4>
+                </div>
+                <div className={`${configs[color].text} opacity-20`}>
+                    {icon}
+                </div>
             </div>
         </div>
     );

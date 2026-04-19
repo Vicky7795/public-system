@@ -2,6 +2,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
+const automationService = require('./services/automationService');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -29,6 +30,10 @@ app.use((req, res, next) => {
     res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
     res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
     res.header('Access-Control-Allow-Credentials', 'true');
+    
+    // Satisfy Google Sign-In COOP requirements - Relaxed for localhost development
+    res.header('Cross-Origin-Opener-Policy', 'unsafe-none');
+    // Removed strict Embedder Policy to prevent ERR_BLOCKED_BY_RESPONSE
 
     // Instantly return 200 for OPTIONS (Preflight)
     if (req.method === 'OPTIONS') {
@@ -45,7 +50,10 @@ if (!MONGODB_URI) {
     console.error('FATAL ERROR: MONGODB_URI is not defined in environment variables.');
 } else {
     mongoose.connect(MONGODB_URI)
-        .then(() => console.log('✅ MongoDB connected'))
+        .then(() => {
+            console.log('✅ MongoDB connected');
+            automationService.init();
+        })
         .catch(err => console.error('❌ MongoDB connection error:', err.message));
 }
 

@@ -1,0 +1,32 @@
+{
+  "dashboard": {
+    "secured_session": "Secured Session",
+    "welcome": "Welcome back",
+    "file_complaint": "File New Complaint",
+    "track_complaint": "Track Complaint",
+    "my_complaints": "My Complaints",
+    "help": "Help & Support",
+    "logout": "Logout System",
+    "recent_complaints": "Recent Grievances",
+    "status": {
+      "pending": "Pending",
+      "assigned": "Under Review",
+      "in_progress": "In Progress",
+      "resolved": "Resolved"
+    },
+    "search": "Search tickets..."
+  },
+  "submit": {
+    "title": "File Official Grievance",
+    "subtitle": "Submit your issue directly to the concerned department. Your identity remains protected.",
+    "form_title": "Complaint Title",
+    "form_title_placeholder": "E.g. Broken water pipe in sector 4",
+    "form_description": "Detailed Description",
+    "form_description_placeholder": "Provide specific details about the issue...",
+    "form_location": "Incident Location",
+    "form_image": "Supporting Evidence (Optional)",
+    "detecting": "Detecting High-Accuracy GPS...",
+    "submit_btn": "Submit Grievance",
+    "submitting": "Processing..."
+  }
+}

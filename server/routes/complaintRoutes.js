@@ -4,6 +4,11 @@ const axios = require('axios');
 const Complaint = require('../models/Complaint');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
+const assignmentService = require('../services/assignmentService');
+const notificationService = require('../services/notificationService');
+const User = require('../models/User');
+const Department = require('../models/Department');
+const { auth, adminAuth } = require('../middleware/auth');
 
 // Helper to generate Ticket ID
 const generateTicketId = () => {
@@ -13,8 +18,11 @@ const generateTicketId = () => {
 // SLA Mapping
 const getSlaDeadline = (priority) => {
     const now = new Date();
-    if (priority === 'High') return new Date(now.getTime() + 24 * 60 * 60 * 1000); // 1 day
-    if (priority === 'Medium') return new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000); // 3 days
+    const p = (priority || 'Medium').toLowerCase();
+    
+    if (p === 'emergency') return new Date(now.getTime() + 6 * 60 * 60 * 1000); // 6 hours
+    if (p === 'high') return new Date(now.getTime() + 24 * 60 * 60 * 1000); // 1 day
+    if (p === 'medium') return new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000); // 3 days
     return new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 days (Low)
 };
 
@@ -53,24 +61,37 @@ router.get('/public-stats', async (req, res) => {
 
 /**
  * @route   GET /api/complaints/reverse-geocode
- * @desc    Backend proxy to solve CORS issues with Nominatim
+ * @desc    Highly accurate backend proxy for Geocoding (Free OpenStreetMap/Nominatim)
  */
 router.get('/reverse-geocode', async (req, res) => {
     const { lat, lng } = req.query;
+
     if (!lat || !lng) {
         return res.status(400).json({ message: "Latitude and Longitude are required." });
     }
 
     try {
+        console.log(`[Geocode Proxy] Resolving address via Nominatim for (${lat}, ${lng})`);
+        
+        // Nominatim (OpenStreetMap) - Completely Free
         const geoRes = await axios.get(
-            `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1`,
-            { headers: { 'Accept-Language': 'en', 'User-Agent': 'PGRS-Backend/1.0' } }
+            `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=jsonv2&addressdetails=1`,
+            { 
+                headers: { 
+                    'Accept-Language': 'en', 
+                    'User-Agent': 'CitizenGrievancePortal/1.0 (Government-System)' 
+                } 
+            }
         );
+
+        if (!geoRes.data || !geoRes.data.address) {
+            throw new Error("No address found for these coordinates.");
+        }
 
         const a = geoRes.data.address || {};
         const parts = [
             a.road || a.pedestrian || a.footway,
-            a.suburb || a.neighbourhood || a.quarter,
+            a.suburb || a.neighbourhood || a.quarter || a.locality,
             a.city || a.town || a.village || a.county,
             a.state,
             a.postcode,
@@ -78,25 +99,108 @@ router.get('/reverse-geocode', async (req, res) => {
         ].filter(Boolean);
 
         const address = parts.length > 0 ? parts.join(', ') : geoRes.data.display_name;
-        res.json({ address, display_name: geoRes.data.display_name, raw: geoRes.data });
+        
+        res.json({ 
+            address, 
+            display_name: geoRes.data.display_name, 
+            raw: geoRes.data, 
+            provider: 'nominatim',
+            structured: {
+                street: a.road || a.pedestrian || '',
+                area: a.suburb || a.neighbourhood || '',
+                city: a.city || a.town || a.village || '',
+                state: a.state || '',
+                pincode: a.postcode || ''
+            }
+        });
+
     } catch (err) {
         console.error("[Backend Geocode Proxy] Error:", err.message);
         res.status(502).json({ message: "Failed to resolve address from coordinate provider." });
     }
 });
 
-// Middleware to verify JWT
-const auth = (req, res, next) => {
-    const token = req.header('Authorization');
-    if (!token) return res.status(401).json({ message: 'No token, authorization denied' });
-    try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        req.user = decoded;
-        next();
-    } catch (err) {
-        res.status(401).json({ message: 'Token is not valid' });
+/**
+ * @route   GET /api/complaints/geocode-search
+ * @desc    Backend proxy for Nominatim location search (avoids browser CORS block)
+ * @query   q - search string
+ */
+router.get('/geocode-search', async (req, res) => {
+    const { q } = req.query;
+    if (!q || q.trim().length < 2) {
+        return res.status(400).json({ message: 'Search query too short.' });
     }
-};
+
+    // Validate pincode: must be a valid Indian 6-digit pincode
+    const isPincode = /^\d+$/.test(q.trim());
+    if (isPincode) {
+        const indianPincodeRegex = /^[1-9][0-9]{5}$/;
+        if (!indianPincodeRegex.test(q.trim())) {
+            return res.status(400).json({ message: 'Please enter a valid 6-digit Indian pincode.' });
+        }
+    }
+
+    try {
+        // Always append India to the query and restrict countrycodes to India
+        const searchQuery = q.trim().toLowerCase().includes('india') ? q.trim() : `${q.trim()}, India`;
+
+        const searchRes = await axios.get(
+            `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(searchQuery)}&countrycodes=in&format=json&limit=8&addressdetails=1`,
+            {
+                headers: {
+                    'Accept-Language': 'en',
+                    'User-Agent': 'CitizenGrievancePortal/2.0 (Government-System)'
+                }
+            }
+        );
+
+        // Server-side safety filter: only return results tagged as India
+        const indiaOnly = (searchRes.data || []).filter(r => {
+            const country = r.address?.country_code || '';
+            return country.toLowerCase() === 'in';
+        });
+
+        res.json(indiaOnly);
+    } catch (err) {
+        console.error('[Geocode Search Proxy] Error:', err.message);
+        res.status(502).json({ message: 'Failed to search location.' });
+    }
+});
+
+/**
+ * @route   GET /api/complaints/ip-location
+ * @desc    Fallback to IP-based location if GPS is unavailable
+ */
+router.get('/ip-location', async (req, res) => {
+    try {
+        console.log('[Geocode Proxy] Fetching IP-based location fallback...');
+        const geoRes = await axios.get('https://ipapi.co/json/', {
+            headers: { 'User-Agent': 'CitizenGrievancePortal/1.0' },
+            timeout: 3000
+        });
+
+        if (!geoRes.data || geoRes.data.error) {
+            throw new Error(geoRes.data?.reason || "IP Geolocation failed");
+        }
+
+        res.json({
+            lat: geoRes.data.latitude,
+            lng: geoRes.data.longitude,
+            city: geoRes.data.city,
+            state: geoRes.data.region,
+            country: geoRes.data.country_name,
+            pincode: geoRes.data.postal,
+            accuracy: 1000,
+            isIP: true
+        });
+    } catch (err) {
+        console.error("[Backend IP-Location Error]:", err.message);
+        res.status(502).json({ message: "Could not determine IP location." });
+    }
+});
+
+
+
 
 // Keyword mapping: category key MUST exactly match department name in DB
 const CATEGORY_KEYWORDS = {
@@ -203,6 +307,7 @@ router.get('/all', auth, async (req, res) => {
         const complaints = await Complaint.find()
             .populate('userId', 'name phone')
             .populate('assignedOfficerId', 'name')
+            .populate('departmentId', 'departmentName')
             .sort({ createdAt: -1 });
         res.json(complaints);
     } catch (err) {
@@ -259,19 +364,19 @@ router.get('/assigned', auth, async (req, res) => {
 
 // (CATEGORY_KEYWORDS and findDepartmentForCategory are defined above the routes)
 
-// 2. Main POST Route (With AI Routing & Optional Auto-Assignment)
+// 2. Main POST Route (With AI Routing & Automated Assignment)
 router.post('/', auth, async (req, res) => {
     try {
-        const { title, description, location, imageData } = req.body;
+        const { title, description, location, imageData, language = 'en' } = req.body;
         console.log("New Grievance Submission Received:", {
             title,
+            language,
             descriptionLength: description?.length,
             hasLocation: !!location,
             address: location?.address
         });
 
-        // 0. Validate and Process Location payload
-        // The frontend now handles geocoding and provides a resolved address.
+        // 0. Validate Location
         if (!location || !location.address) {
             return res.status(400).json({ message: "Valid location address is required." });
         }
@@ -280,27 +385,26 @@ router.post('/', auth, async (req, res) => {
         let category = null;
         let priority = "Medium";
         let departmentId = null;
-        let assignedOfficerId = null;
+        
+        let translatedTitle = title;
+        let translatedDescription = description;
 
         const combinedInput = `${title} ${description}`;
 
-        // 1. Primary: Local Keyword Classification
-        console.log(`[POST /complaints] Running primary Keyword classification...`);
-        category = classifyTextByKeywords(combinedInput);
+        // 1. Classification & Translation
+        // If English, try local keyword matching first to save API calls
+        if (language === 'en') {
+            category = classifyTextByKeywords(combinedInput);
+        }
 
-        // 2. Secondary: AI Prediction Fallback
-        if (!category) {
-            console.log(`[POST /complaints] Keyword classification yielded no match. Triggering AI Fallback...`);
+        // If not English, or if English keyword matching failed, route to AI
+        if (!category || language !== 'en') {
             try {
-                const systemPrompt = `Classify the complaint strictly into ONE of the following precise categories: Transport, Agriculture, Revenue, Social, Police, Forest, Water, Electricity, PWD, Municipal, Health, Education.
-Ensure you return ONLY one category from this exact list. No exceptions.
-Also determine priority: Low, Medium, High, Emergency.
-Return ONLY JSON in this format:
-{
-  "category": "exact category string",
-  "priority": "Low | Medium | High | Emergency",
-  "confidence": number
-}`;
+                const systemPrompt = `You are an expert civic grievance analyzer and translator.
+1. Strictly classify the complaint into ONE of these precise categories: Transport, Agriculture, Revenue, Social, Police, Forest, Water, Electricity, PWD, Municipal, Health, Education.
+2. Determine Priority: Low, Medium, High, Emergency.
+3. Translate the title and description into clear, professional English. If it is already in English, return it identically.
+Return ONLY JSON: { "category": "category string", "priority": "priority string", "translatedTitle": "string", "translatedDescription": "string" }`;
 
                 const aiResponse = await axios.post(
                     'https://api.openai.com/v1/chat/completions',
@@ -308,7 +412,7 @@ Return ONLY JSON in this format:
                         model: 'gpt-4o-mini',
                         messages: [
                             { role: 'system', content: systemPrompt },
-                            { role: 'user', content: `Complaint: ${combinedInput}` }
+                            { role: 'user', content: `Title: ${title}\nDescription: ${description}` }
                         ],
                         temperature: 0.2,
                         response_format: { type: 'json_object' }
@@ -318,81 +422,60 @@ Return ONLY JSON in this format:
                             'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
                             'Content-Type': 'application/json'
                         },
-                        timeout: 4000
+                        timeout: 8000
                     }
                 );
 
                 const parsedData = JSON.parse(aiResponse.data.choices[0].message.content);
                 category = parsedData.category;
                 priority = parsedData.priority || "Medium";
-                console.log(`[POST /complaints] OpenAI Prediction Result: category="${category}", priority="${priority}", confidence="${parsedData.confidence}"`);
+                translatedTitle = parsedData.translatedTitle || title;
+                translatedDescription = parsedData.translatedDescription || description;
             } catch (aiErr) {
-                console.error("[POST /complaints] AI service fallback error:", aiErr.message);
+                console.error("[POST /complaints] AI translation/classification fallback error:", aiErr.message);
+                category = category || "General"; // Ultimate fallback
             }
-        } else {
-            console.log(`[POST /complaints] Keyword classification assigned category: "${category}"`);
         }
 
-        // 2. Smart Department Resolution
-        const Department = require('../models/Department');
-        const User = require('../models/User');
-
-        let department = null;
-        if (category) {
-            department = await findDepartmentForCategory(Department, category);
-        }
-
+        // 2. Department Resolution
+        const department = await findDepartmentForCategory(Department, category);
         if (!department) {
-            console.error(`[POST /complaints] Rejecting: Could not route "${category || 'undefined category'}" to a valid department.`);
-            return res.status(400).json({ message: "We could not automatically assign your grievance to a valid government department based on the details provided. Please rewrite with more specific details." });
+            return res.status(400).json({ message: "We could not automatically assign your grievance. Please provide more specific details." });
         }
         
         departmentId = department._id;
-        console.log(`Department matched: "${department.departmentName}"`);
 
-        // 3. Auto-Assignment (Disabled to prioritize the Intel Pool flow)
-        /*
-        if (departmentId) {
-            const officer = await User.findOne({
-                role: 'Officer',
-                departmentId: departmentId,
-                activeCasesCount: { $lt: 20 } 
-            }).sort({ activeCasesCount: 1 });
-
-            if (officer) {
-                assignedOfficerId = officer._id;
-                await User.findByIdAndUpdate(officer._id, { $inc: { activeCasesCount: 1 } });
-            }
-        }
-        */
-
+        // 3. Create Complaint (Save First)
         const newComplaint = new Complaint({
             userId: req.user.id,
             ticketId: generateTicketId(),
-            title,
-            description,
+            title: translatedTitle, // Default to english for primary UI
+            description: translatedDescription, 
+            originalText: combinedInput,
+            translatedText: `${translatedTitle} - ${translatedDescription}`,
+            language: language,
             category,
             departmentId,
             priorityLevel: priority,
-            assignedOfficerId,
-            location: resolvedLocation,
+            location: {
+                ...resolvedLocation,
+                landmark: req.body.location?.landmark || null
+            },
             imageData: imageData || null,
-            status: assignedOfficerId ? 'Assigned' : 'Pending',
+            status: 'Pending',
             slaDeadline: getSlaDeadline(priority)
         });
         await newComplaint.save();
-        
-        // Populate for response
+
+        // 4. Trigger Auto-Assignment Service
+        await assignmentService.assignToOfficer(newComplaint, departmentId);
+
+        // 5. Final Fetch for Response
         const populated = await Complaint.findById(newComplaint._id)
-            .populate('assignedOfficerId', 'name');
+            .populate('assignedOfficerId', 'name')
+            .populate('departmentId');
 
-        console.log(`Grievance Saved: ${newComplaint.ticketId} | Cat: ${category} | Dept: ${department?.departmentName || 'None'} | Officer: ${assignedOfficerId ? 'Assigned' : 'Pool'}`);
-
-        const responseData = populated.toObject();
-        if (department) {
-            responseData.departmentName = department.departmentName;
-        }
-        res.json(responseData);
+        res.json(populated);
     } catch (err) {
         console.error("Grievance Creation FAILED:", err);
         res.status(500).json({ message: err.message });
@@ -403,7 +486,10 @@ Return ONLY JSON in this format:
 router.get('/track/:ticketId', async (req, res) => {
     try {
         const ticketId = req.params.ticketId.trim().toUpperCase();
-        let complaint = await Complaint.findOne({ ticketId }).populate('assignedOfficerId', 'name').select('-imageData');
+        let complaint = await Complaint.findOne({ ticketId })
+            .populate('assignedOfficerId', 'name')
+            .populate('departmentId')
+            .select('-imageData');
         if (!complaint && ticketId.length === 24) {
             complaint = await Complaint.findById(ticketId).select('-imageData');
         }
@@ -495,13 +581,11 @@ router.patch('/:id/accept-and-resolve', auth, async (req, res) => {
             { returnDocument: 'after' }
         );
 
-        // Update officer workload
+        // Update officer workload and performance
         const User = require('../models/User');
-        if (isUnassigned) {
-            // Claimed and resolved — no net change needed (claim +1, resolve -1 = 0)
-        } else {
-            await User.findByIdAndUpdate(req.user.id, { $inc: { activeCasesCount: -1 } });
-        }
+        const updateQuery = { $inc: { resolvedCount: 1 } };
+        if (!isUnassigned) updateQuery.$inc.activeCasesCount = -1;
+        await User.findByIdAndUpdate(req.user.id, updateQuery);
 
         console.log(`Direct Resolve: ${updated.ticketId} by ${req.user.id} (${officerDept?.departmentName})`);
         res.json(updated);
@@ -552,9 +636,9 @@ router.patch('/:id/resolve', auth, async (req, res) => {
 
         if (!complaint) return res.status(404).json({ message: 'Task not found or not assigned to you' });
 
-        // Decrease officer workload on resolution
+        // Decrease officer workload and increase performance on resolution
         const User = require('../models/User');
-        await User.findByIdAndUpdate(req.user.id, { $inc: { activeCasesCount: -1 } });
+        await User.findByIdAndUpdate(req.user.id, { $inc: { activeCasesCount: -1, resolvedCount: 1 } });
         res.json(complaint);
     } catch (err) {
         res.status(500).json({ message: err.message });
@@ -606,6 +690,139 @@ router.patch('/:id/reopen', auth, async (req, res) => {
 
         const updatedComplaint = await Complaint.findById(complaint._id).populate('assignedOfficerId', 'name');
         res.json(updatedComplaint);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+// ==========================================
+// ADMIN CONTROL ENDPOINTS (RESTRICTED)
+// ==========================================
+
+
+
+// Admin: Reassign Complaint
+router.patch('/:id/reassign', auth, adminAuth, async (req, res) => {
+    try {
+        const { officerId } = req.body;
+        const complaint = await Complaint.findById(req.params.id);
+        if (!complaint) return res.status(404).json({ message: 'Complaint not found' });
+
+        // Handle Unassignment (Unstacking the officer and moving back to Pool)
+        if (!officerId || officerId === '' || officerId === 'null') {
+            const oldOfficerId = complaint.assignedOfficerId;
+            if (oldOfficerId) {
+                await User.findByIdAndUpdate(oldOfficerId, { $inc: { activeCasesCount: -1 } });
+            }
+            complaint.assignedOfficerId = null;
+            complaint.status = 'Pending';
+            if (!complaint.notes) complaint.notes = [];
+            complaint.notes.push({ note: `ADMIN ACTION: Unassigned from previous officer. Returned to Department Pool.` });
+            await complaint.save();
+            
+            const updated = await Complaint.findById(complaint._id).populate('assignedOfficerId', 'name email phone');
+            return res.json({ success: true, complaint: updated });
+        }
+
+        // Validate New Officer
+        const oldOfficerId = complaint.assignedOfficerId;
+        const newOfficer = await User.findById(officerId);
+        if (!newOfficer || newOfficer.role !== 'Officer') {
+            return res.status(400).json({ message: 'Invalid officer selected for assignment.' });
+        }
+
+        // Prevent redundant reassignment to same officer
+        if (oldOfficerId && oldOfficerId.toString() === officerId) {
+            return res.json({ success: true, complaint });
+        }
+
+        // Rebalance workloads
+        if (oldOfficerId) {
+            await User.findByIdAndUpdate(oldOfficerId, { $inc: { activeCasesCount: -1 } });
+        }
+        await User.findByIdAndUpdate(officerId, { $inc: { activeCasesCount: 1 } });
+
+        complaint.assignedOfficerId = officerId;
+        complaint.status = 'Assigned';
+        if (!complaint.notes) complaint.notes = [];
+        complaint.notes.push({ note: `ADMIN REASSIGNMENT: Moved to ${newOfficer.name}` });
+        await complaint.save();
+
+        // Notify New Officer
+        await notificationService.send({
+            recipientId: officerId,
+            type: 'NEW_ASSIGNMENT',
+            message: `ADMIN ACTION: Case #${complaint.ticketId} has been reassigned to you.`,
+            complaintId: complaint._id,
+            priority: 'HIGH'
+        });
+
+        const updated = await Complaint.findById(complaint._id).populate('assignedOfficerId', 'name email phone');
+        res.json({ success: true, complaint: updated });
+    } catch (err) {
+        console.error(`[Admin Reassign Error] Complaint ID: ${req.params.id}, Error:`, err);
+        res.status(500).json({ message: "Failed to process reassignment. Check if the officer ID is valid." });
+    }
+});
+
+// Admin: Send Warning
+router.post('/:id/warn', auth, adminAuth, async (req, res) => {
+    try {
+        const { message } = req.body;
+        const complaint = await Complaint.findById(req.params.id);
+        if (!complaint || !complaint.assignedOfficerId) {
+            return res.status(400).json({ message: 'Cannot warn: No officer assigned' });
+        }
+
+        const warningMsg = message || `URGENT COMMAND WARNING: Stagnant progress on #${complaint.ticketId}. Resolve immediately.`;
+
+        await notificationService.send({
+            recipientId: complaint.assignedOfficerId,
+            type: 'ADMIN_WARNING',
+            message: warningMsg,
+            complaintId: complaint._id,
+            priority: 'HIGH'
+        });
+
+        complaint.hasWarning = true;
+        complaint.notes.push({ note: `SYSTEM ALERT: Command Warning issued to officer. Reason: ${warningMsg}` });
+        await complaint.save();
+
+        const updated = await Complaint.findById(req.params.id).populate('assignedOfficerId', 'name email phone');
+        res.json(updated);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+// Admin: Set Priority
+router.patch('/:id/priority', auth, adminAuth, async (req, res) => {
+    try {
+        const { priorityLevel } = req.body;
+        const complaint = await Complaint.findByIdAndUpdate(
+            req.params.id, 
+            { priorityLevel }, 
+            { new: true }
+        ).populate('assignedOfficerId', 'name email phone');
+        
+        res.json(complaint);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+// Admin: Add Remark
+router.post('/:id/remark', auth, adminAuth, async (req, res) => {
+    try {
+        const { remark } = req.body;
+        const complaint = await Complaint.findById(req.params.id);
+        if (!complaint) return res.status(404).json({ message: 'Complaint not found' });
+
+        complaint.notes.push({ note: `ADMIN REMARK: ${remark}` });
+        await complaint.save();
+
+        const updated = await Complaint.findById(req.params.id).populate('assignedOfficerId', 'name email phone');
+        res.json(updated);
     } catch (err) {
         res.status(500).json({ message: err.message });
     }

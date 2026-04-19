@@ -10,7 +10,13 @@ const userSchema = new mongoose.Schema({
     // Officer Specific Fields
     departmentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Department' },
     assignedArea: { type: String },
-    activeCasesCount: { type: Number, default: 0 }
+    designation: { type: String, default: 'Officer' },
+    status: { type: String, enum: ['Active', 'Inactive'], default: 'Active' },
+    // Accountability & Performance Metrics
+    resolvedCount: { type: Number, default: 0 },
+    overdueCount: { type: Number, default: 0 },
+    escalatedCount: { type: Number, default: 0 },
+    unreadNotifications: { type: Number, default: 0 }
 }, { timestamps: true });
 
 module.exports = mongoose.model('User', userSchema);

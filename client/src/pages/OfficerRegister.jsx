@@ -66,8 +66,8 @@ const OfficerRegister = () => {
             </div>
             <div className="bg-white p-10 rounded-[2.5rem] shadow-2xl shadow-slate-200/50 w-full max-w-md border border-slate-200">
                 <div className="flex justify-center mb-6">
-                    <div className="bg-blue-900 p-4 rounded-3xl text-white shadow-lg">
-                        <ShieldPlus size={40} />
+                    <div className="bg-white p-3 rounded-2xl shadow-sm border border-slate-100">
+                        <img src="/logo.png" alt="Government Logo" className="h-10 w-10 object-contain" />
                     </div>
                 </div>
                 <h2 className="text-3xl font-black text-slate-900 mb-2 text-center tracking-tight">Duty Desk Entry</h2>

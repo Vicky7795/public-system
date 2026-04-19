@@ -4,6 +4,9 @@ const departmentSchema = new mongoose.Schema({
     departmentName: { type: String, required: true, unique: true },
     description: { type: String },
     slaHours: { type: Number, default: 48 },
+    contactOfficer: { type: String, default: "Nodal Officer" },
+    contactPhone: { type: String },
+    contactWhatsApp: { type: String },
 }, { timestamps: true });
 
 module.exports = mongoose.model('Department', departmentSchema);

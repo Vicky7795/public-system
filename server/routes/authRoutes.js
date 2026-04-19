@@ -10,7 +10,8 @@ const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 // Register
 router.post('/register', async (req, res) => {
     try {
-        const { name, phone, email, password, role, departmentId, assignedArea } = req.body;
+        console.log('Incoming Registration Request:', req.body);
+        const { name, phone, email, password, role, departmentId, assignedArea, designation, status } = req.body;
         const normalizedEmail = email?.toLowerCase().trim();
         if (!normalizedEmail) return res.status(400).json({ message: 'Email is required' });
 
@@ -19,11 +20,17 @@ router.post('/register', async (req, res) => {
 
         // 1. Check if email exists
         let user = await User.findOne({ email: normalizedEmail });
-        if (user) return res.status(400).json({ message: 'User already exists with this email' });
+        if (user) {
+            console.log(`Registration blocked: Email ${normalizedEmail} already taken.`);
+            return res.status(400).json({ message: 'User already exists with this email address' });
+        }
 
         // 2. Check if phone exists (to avoid relying solely on catch block for common errors)
         const existingPhone = await User.findOne({ phone: normalizedPhone });
-        if (existingPhone) return res.status(400).json({ message: 'User already exists with this phone number' });
+        if (existingPhone) {
+            console.log(`Registration blocked: Phone ${normalizedPhone} already taken.`);
+            return res.status(400).json({ message: 'User already exists with this phone number' });
+        }
 
         const userData = {
             name,
@@ -36,6 +43,8 @@ router.post('/register', async (req, res) => {
         if (role === 'Officer') {
             userData.departmentId = departmentId;
             userData.assignedArea = assignedArea;
+            userData.designation = designation || 'Officer';
+            userData.status = status || 'Active';
         }
 
         user = new User(userData);
@@ -77,8 +86,21 @@ router.post('/login', async (req, res) => {
 // Get all Officers (for Admin Management)
 router.get('/officers', async (req, res) => {
     try {
-        const officers = await User.find({ role: 'Officer' }, 'name email phone departmentId assignedArea').populate('departmentId', 'departmentName');
+        const officers = await User.find({ role: 'Officer' }, 'name email phone departmentId assignedArea designation status resolvedCount overdueCount escalatedCount')
+            .populate('departmentId', 'departmentName');
         res.json(officers);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+// Get Single Officer
+router.get('/officers/:id', async (req, res) => {
+    try {
+        const officer = await User.findOne({ _id: req.params.id, role: 'Officer' })
+            .populate('departmentId', 'departmentName');
+        if (!officer) return res.status(404).json({ message: 'Officer not found' });
+        res.json(officer);
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
@@ -87,7 +109,7 @@ router.get('/officers', async (req, res) => {
 // Update Officer
 router.patch('/officers/:id', async (req, res) => {
     try {
-        const { name, email, phone, departmentId, assignedArea } = req.body;
+        const { name, email, phone, departmentId, assignedArea, designation, status } = req.body;
         const officer = await User.findById(req.params.id);
         if (!officer || officer.role !== 'Officer') return res.status(404).json({ message: 'Officer not found' });
 
@@ -96,6 +118,8 @@ router.patch('/officers/:id', async (req, res) => {
         if (phone) officer.phone = phone;
         if (departmentId) officer.departmentId = departmentId;
         if (assignedArea) officer.assignedArea = assignedArea;
+        if (designation) officer.designation = designation;
+        if (status) officer.status = status;
 
         await officer.save();
         res.json({ message: 'Officer updated successfully', officer });
@@ -185,6 +209,30 @@ router.post('/google', async (req, res) => {
     } catch (err) {
         console.error('Google Auth Error:', err);
         res.status(500).json({ message: 'Google authentication failed' });
+    }
+});
+
+const { auth } = require('../middleware/auth');
+
+// Get Notifications
+router.get('/notifications', auth, async (req, res) => {
+    try {
+        const Notification = require('../models/Notification');
+        const list = await Notification.find({ recipientId: req.user.id }).sort({ createdAt: -1 }).limit(20);
+        res.json(list);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+// Mark All as Read
+router.post('/notifications/read-all', auth, async (req, res) => {
+    try {
+        const notificationService = require('../services/notificationService');
+        await notificationService.markAllRead(req.user.id);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
     }
 });
 

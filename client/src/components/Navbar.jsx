@@ -34,7 +34,7 @@ const Navbar = () => {
             <div className="container mx-auto px-6 flex justify-between items-center">
                 <Link to="/" className="flex items-center gap-3 active:scale-95 transition-transform group" onClick={() => setIsMenuOpen(false)}>
                     <div className="bg-white/10 p-1.5 rounded-xl backdrop-blur-sm border border-white/20 group-hover:bg-white/20 transition-all shadow-lg">
-                        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Emblem_of_India.svg/200px-Emblem_of_India.svg.png" alt="Logo" className="h-8 w-auto brightness-0 invert" />
+                        <img src="/logo.png" alt="Government Logo" className="h-8 w-auto" />
                     </div>
                     <div className="flex flex-col">
                         <span className="text-white font-black text-xs uppercase tracking-widest leading-none mb-1">Government of India</span>
