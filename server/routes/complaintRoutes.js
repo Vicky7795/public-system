@@ -376,7 +376,13 @@ router.post('/', auth, async (req, res) => {
             address: location?.address
         });
 
-        // 0. Validate Location
+        // 0. Base Input Validation
+        if (!title || typeof title !== 'string' || title.trim().length < 5) {
+            return res.status(400).json({ message: "A descriptive title (min 5 chars) is required." });
+        }
+        if (!description || typeof description !== 'string' || description.trim().length < 10) {
+            return res.status(400).json({ message: "A detailed description (min 10 chars) is required." });
+        }
         if (!location || !location.address) {
             return res.status(400).json({ message: "Valid location address is required." });
         }

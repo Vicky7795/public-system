@@ -21,7 +21,7 @@ const automationService = {
         try {
             // 1. Find complaints that are overdue but not yet marked
             const breachCases = await Complaint.find({
-                status: { $in: ['Assigned', 'In Progress', 'Pending', 'Reopened'] },
+                status: { $in: ['Assigned', 'In Progress', 'Pending', 'Reopened', 'Overdue'] },
                 slaDeadline: { $lt: now }
             });
 

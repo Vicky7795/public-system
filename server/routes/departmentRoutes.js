@@ -56,8 +56,27 @@ router.patch('/:id', adminAuth, async (req, res) => {
 // Delete Department
 router.delete('/:id', adminAuth, async (req, res) => {
     try {
-        await Department.findByIdAndDelete(req.params.id);
-        res.json({ message: 'Department deleted' });
+        const depId = req.params.id;
+        
+        // 1. Check for active complaints in this department
+        const complaintCount = await Complaint.countDocuments({ departmentId: depId });
+        if (complaintCount > 0) {
+            return res.status(400).json({ 
+                message: `Cannot delete department: ${complaintCount} grievances are currently associated with it. Please reassign them first.` 
+            });
+        }
+
+        // 2. Check for officers assigned to this department
+        const User = require('../models/User');
+        const officerCount = await User.countDocuments({ departmentId: depId, role: 'Officer' });
+        if (officerCount > 0) {
+            return res.status(400).json({ 
+                message: `Cannot delete department: ${officerCount} officers are still assigned to it. Please update their department first.` 
+            });
+        }
+
+        await Department.findByIdAndDelete(depId);
+        res.json({ message: 'Department successfully removed.' });
     } catch (err) {
         res.status(500).json({ message: err.message });
     }

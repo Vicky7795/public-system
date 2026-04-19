@@ -63,9 +63,21 @@ app.use('/api/complaints', require('./routes/complaintRoutes'));
 app.use('/api/departments', require('./routes/departmentRoutes'));
 
 
-app.get('/', (req, res) => {
-    res.send('AI Public Grievance API is running (Version: 1.2.0-stabilized)');
-});
+// Serve static files from the React app in production
+if (process.env.NODE_ENV === 'production') {
+    app.use(express.static(path.join(__dirname, '../client/dist')));
+
+    app.get('*', (req, res) => {
+        // Exclude /api routes from static serving to let them 404 naturally
+        if (!req.path.startsWith('/api')) {
+            res.sendFile(path.join(__dirname, '../client/dist/index.html'));
+        }
+    });
+} else {
+    app.get('/', (req, res) => {
+        res.send('AI Public Grievance API is running (Version: 1.2.0-stabilized)');
+    });
+}
 
 // Final Rescue Error Handler
 app.use((err, req, res, next) => {

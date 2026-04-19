@@ -103,7 +103,7 @@ const LocationPicker = ({ onLocationSelect, initialLocation }) => {
             clearTimeout(geocodeTimer.current);
             clearTimeout(searchTimer.current);
         };
-    }, []);
+    }, [stopWatch]);
 
     /* ── Restore initial location ── */
     useEffect(() => {

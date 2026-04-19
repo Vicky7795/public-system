@@ -82,7 +82,7 @@ const OfficerDashboard = () => {
             await api.patch(`/complaints/${id}/accept`);
             await fetchData();
             setView('mine');
-        } catch (err) {
+        } catch {
             setFetchError('Assignment failed.');
         }
     };
@@ -92,7 +92,7 @@ const OfficerDashboard = () => {
             await api.patch(`/complaints/${selectedId}/progress`, progressInput);
             setModal(null);
             fetchData();
-        } catch (err) {
+        } catch {
             setFetchError('Update failed.');
         }
     };
@@ -106,7 +106,7 @@ const OfficerDashboard = () => {
             await api.patch(`/complaints/${selectedId}/resolve`, resolveInput);
             setModal(null);
             fetchData();
-        } catch (err) {
+        } catch {
             setFetchError('Closure failed.');
         }
     };
@@ -121,7 +121,7 @@ const OfficerDashboard = () => {
             setModal(null);
             setDirectResolveInput({ resolutionNote: '', proofImage: '' });
             await fetchData();
-        } catch (err) {
+        } catch {
             setFetchError('Resolution failed.');
         }
     };

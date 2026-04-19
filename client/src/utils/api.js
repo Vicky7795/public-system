@@ -18,9 +18,25 @@ api.interceptors.response.use(
     (response) => response,
     (error) => {
         if (error.response && error.response.status === 401) {
+            let role = 'Citizen';
+            try {
+                const user = JSON.parse(localStorage.getItem('user'));
+                if (user && user.role) role = user.role;
+            } catch {
+                // Ignore parse errors, default to Citizen
+            }
+
             localStorage.removeItem('token');
             localStorage.removeItem('user');
-            window.location.href = '/citizen/login';
+
+            if (role === 'Officer') {
+                window.location.href = '/officer/login';
+            } else if (role === 'Admin') {
+                // Adjust if a specific Admin login exists, else officer
+                window.location.href = '/officer/login'; 
+            } else {
+                window.location.href = '/citizen/login';
+            }
         }
         return Promise.reject(error);
     }

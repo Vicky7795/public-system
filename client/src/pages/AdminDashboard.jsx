@@ -94,7 +94,7 @@ const AdminDashboard = () => {
         try {
             const res = await api.get(`/auth/officers/${officerId}`);
             setSelectedOfficer(res.data);
-        } catch (err) {
+        } catch {
             setOfficerError('Unable to load officer details. Please try again.');
         } finally {
             setOfficerLoading(false);
@@ -119,10 +119,6 @@ const AdminDashboard = () => {
     const resolvedCount = complaints.filter(c => c.status === 'Resolved').length;
     const inProgressCount = complaints.filter(c => c.status === 'In Progress').length;
     const pendingCount = complaints.filter(c => c.status === 'Pending').length;
-
-    const pieData = departments.map((d, i) => ({
-        name: d.departmentName, value: d.totalComplaints || 0, color: DEPT_COLORS[i % DEPT_COLORS.length]
-    })).filter(d => d.value > 0);
 
     const statusPie = [
         { name: 'Pending', value: pendingCount, color: '#94A3B8' },
@@ -204,7 +200,7 @@ const AdminDashboard = () => {
             await api.delete(`/auth/officers/${id}`);
             setConfirmDeleteId(null);
             await fetchAll();
-        } catch (err) {
+        } catch {
             alert('Operation failed.');
         }
     };

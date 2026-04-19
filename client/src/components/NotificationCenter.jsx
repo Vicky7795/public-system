@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import api from '../utils/api';
 import { Bell, X, Info, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
 
@@ -7,7 +7,7 @@ const NotificationCenter = () => {
     const [isOpen, setIsOpen] = useState(false);
     const [unreadCount, setUnreadCount] = useState(0);
 
-    const fetchNotifications = async () => {
+    const fetchNotifications = useCallback(async () => {
         try {
             const res = await api.get('/auth/notifications');
             setNotifications(res.data);
@@ -15,13 +15,20 @@ const NotificationCenter = () => {
         } catch (err) {
             console.error("Failed to fetch notifications:", err);
         }
-    };
+    }, []);
 
     useEffect(() => {
-        fetchNotifications();
-        const interval = setInterval(fetchNotifications, 30000); // Poll every 30s
-        return () => clearInterval(interval);
-    }, []);
+        let isMounted = true;
+        const load = async () => {
+            if (isMounted) await fetchNotifications();
+        };
+        load();
+        const interval = setInterval(load, 30000); // Poll every 30s
+        return () => {
+            isMounted = false;
+            clearInterval(interval);
+        };
+    }, [fetchNotifications]);
 
     const markAllRead = async () => {
         try {
