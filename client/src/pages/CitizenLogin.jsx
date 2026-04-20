@@ -224,7 +224,10 @@ const CitizenLogin = () => {
                             <div className="flex justify-center">
                                 <GoogleLogin
                                     onSuccess={handleGoogleSuccess}
-                                    onError={() => setError('Google Authentication Failed. Please verify your internet connection.')}
+                                    onError={() => {
+                                        console.error('Google Auth Failed: Ensure your Origin is authorized in Google Cloud Console (http://localhost:3000)');
+                                        setError('Google Authentication Failed. This is typically due to an unauthorized origin (e.g. localhost:3000) or an invalid Client ID. Please check your Google Cloud Console settings.');
+                                    }}
                                     theme="outline"
                                     shape="pill"
                                     text="signin_with"

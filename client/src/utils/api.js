@@ -13,11 +13,20 @@ api.interceptors.request.use((config) => {
     return config;
 });
 
-// Response interceptor to handle session expiration (401 errors)
+// Response interceptor to handle session expiration (401 errors) and connectivity issues
 api.interceptors.response.use(
     (response) => response,
     (error) => {
-        if (error.response && error.response.status === 401) {
+        if (!error.response) {
+            // No response from server - server might be offline or proxy failed
+            console.error('API Connectivity Error: Backend server appears to be offline.');
+            return Promise.reject({
+                ...error,
+                message: 'Unable to connect to government server. Please ensure the backend is running on port 5000.'
+            });
+        }
+
+        if (error.response.status === 401) {
             let role = 'Citizen';
             try {
                 const user = JSON.parse(localStorage.getItem('user'));
@@ -32,7 +41,6 @@ api.interceptors.response.use(
             if (role === 'Officer') {
                 window.location.href = '/officer/login';
             } else if (role === 'Admin') {
-                // Adjust if a specific Admin login exists, else officer
                 window.location.href = '/officer/login'; 
             } else {
                 window.location.href = '/citizen/login';
