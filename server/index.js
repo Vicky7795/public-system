@@ -33,8 +33,8 @@ app.use((req, res, next) => {
     res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
     res.header('Access-Control-Allow-Credentials', 'true');
     
-    // Satisfy Google Sign-In COOP requirements - Relaxed for localhost development
-    res.header('Cross-Origin-Opener-Policy', 'unsafe-none');
+    // Satisfy Google Sign-In COOP requirements - Changed for secure popup communication
+    res.header('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
     // Removed strict Embedder Policy to prevent ERR_BLOCKED_BY_RESPONSE
 
     // Instantly return 200 for OPTIONS (Preflight)

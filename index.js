@@ -26,6 +26,8 @@ app.use((req, res, next) => {
     } else {
         res.header('Access-Control-Allow-Origin', '*');
     }
+    // Satisfy Google Sign-In COOP requirements - Changed for secure popup communication
+    res.header('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
     res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
     res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
     res.header('Access-Control-Allow-Credentials', 'true');
