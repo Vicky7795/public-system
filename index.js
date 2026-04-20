@@ -41,6 +41,10 @@ app.use(express.json({ limit: '10mb' }));
 // Database connection
 const MONGODB_URI = process.env.MONGODB_URI;
 if (MONGODB_URI) {
+    // Masked log for debugging
+    const maskedUri = MONGODB_URI.substring(0, 20) + '...' + MONGODB_URI.substring(MONGODB_URI.length - 15);
+    console.log('📡 Attempting connection with URI:', maskedUri);
+
     mongoose.connect(MONGODB_URI)
         .then(() => console.log('✅ MongoDB connected (Universal)'))
         .catch(err => console.error('❌ MongoDB Error:', err.message));
