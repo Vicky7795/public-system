@@ -35,10 +35,12 @@ const OfficerDashboard = () => {
 
     useEffect(() => {
         const token = localStorage.getItem('token');
-        if (!token || user?.role !== 'Officer') {
-            navigate('/officer/login');
+        let currentRole = null;
+        try { currentRole = JSON.parse(localStorage.getItem('user'))?.role; } catch {}
+        if (!token || currentRole !== 'Officer') {
+            navigate('/officer/login', { replace: true });
         }
-    }, [navigate, user]);
+    }, [navigate]);
 
     const fetchData = async () => {
         try {
@@ -68,7 +70,7 @@ const OfficerDashboard = () => {
 
     useEffect(() => {
         fetchData();
-        const interval = setInterval(fetchData, 30000); // Short-poll every 30s
+        const interval = setInterval(fetchData, 10000); // Fast 10s polling for escalations
         return () => clearInterval(interval);
     }, []);
 
@@ -167,7 +169,7 @@ const OfficerDashboard = () => {
         <div className="min-h-screen bg-[#F9FAFB] pb-20">
             {/* Top Branding Bar */}
             <div className="bg-white border-b border-gray-200 py-3 mb-8">
-                <div className="container mx-auto px-6 max-w-7xl flex items-center justify-between">
+                <div className="container mx-auto px-4 sm:px-6 max-w-7xl flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <BackButton />
                         <div className="w-px h-6 bg-gray-200 mx-2 hidden sm:block" />
@@ -188,7 +190,7 @@ const OfficerDashboard = () => {
                 </div>
             </div>
 
-            <div className="container mx-auto px-6 max-w-7xl animate-in fade-in duration-500">
+            <div className="container mx-auto px-4 sm:px-6 max-w-7xl animate-in fade-in duration-500">
                 {/* Header & View Switcher */}
                 <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6 mb-10">
                     <div>
@@ -259,6 +261,11 @@ const OfficerDashboard = () => {
                                     <div className="col-span-2 mb-4 lg:mb-0">
                                         <div className="flex flex-col gap-2">
                                             <span className="font-mono text-[11px] font-black text-[#1D4ED8] bg-blue-50 px-2 py-0.5 rounded w-fit border border-blue-100">#{c.ticketId}</span>
+                                            {c.status === 'Escalated' && (
+                                                <span className="text-[10px] font-black px-2 py-0.5 rounded w-fit uppercase tracking-tighter bg-red-600 text-white animate-pulse shadow-[0_0_8px_rgba(220,38,38,0.6)]">
+                                                    Escalated
+                                                </span>
+                                            )}
                                             <span className={`text-[10px] font-bold px-2 py-0.5 rounded w-fit uppercase tracking-tighter ${c.priority === 'High' ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-gray-100 text-gray-600 border border-gray-200'}`}>
                                                 {c.priority} Priority
                                             </span>
@@ -308,7 +315,7 @@ const OfficerDashboard = () => {
                                                 {(c.status === 'Pending' || c.status === 'Reopened') && (
                                                     <button onClick={() => handleAccept(c._id)} className="w-full py-2.5 bg-[#1D4ED8] text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-[#1e40af] transition-all">Start Operation</button>
                                                 )}
-                                                {(c.status === 'In Progress' || c.status === 'Assigned') && (
+                                                {(c.status === 'In Progress' || c.status === 'Assigned' || c.status === 'Escalated') && (
                                                     <>
                                                         <div className="flex items-center justify-between mb-1 px-1">
                                                             <span className="text-[10px] font-bold text-gray-400 uppercase">{c.progress || 0}%</span>
@@ -343,8 +350,8 @@ const OfficerDashboard = () => {
 
             {/* MODALS - Redesigned for Official Registry Style */}
             {modal && (
-                <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-6">
-                    <div className={`${modal === 'detail' ? 'max-w-3xl' : 'max-w-lg'} bg-white rounded-2xl p-8 w-full shadow-2xl animate-in zoom-in-95 duration-200 border border-slate-200 overflow-y-auto max-h-[90vh]`}>
+                <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 sm:p-6">
+                    <div className={`${modal === 'detail' ? 'max-w-3xl' : 'max-w-lg'} bg-white rounded-2xl p-4 sm:p-8 w-full shadow-2xl animate-in zoom-in-95 duration-200 border border-slate-200 overflow-y-auto max-h-[90vh]`}>
                         <header className="flex justify-between items-center mb-6 pb-4 border-b">
                             <div>
                                 <h3 className="text-xl font-bold text-slate-900 uppercase tracking-tight">

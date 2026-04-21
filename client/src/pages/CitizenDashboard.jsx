@@ -30,10 +30,12 @@ const CitizenDashboard = () => {
 
     useEffect(() => {
         const token = localStorage.getItem('token');
-        if (!token || (user && user.role !== 'Citizen')) {
+        let currentRole = null;
+        try { currentRole = JSON.parse(localStorage.getItem('user'))?.role; } catch {}
+        if (!token || currentRole !== 'Citizen') {
             navigate('/citizen/login', { replace: true });
         }
-    }, [navigate, user]);
+    }, [navigate]);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -86,11 +88,11 @@ const CitizenDashboard = () => {
         <div className="min-h-screen bg-[#F9FAFB] pb-20">
             {/* Top Branding Bar */}
             <div className="bg-white border-b border-gray-200 py-3 mb-8">
-                <div className="container mx-auto px-6 max-w-7xl flex items-center justify-between">
+                <div className="container mx-auto px-4 sm:px-6 max-w-7xl flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <BackButton />
                         <div className="w-px h-6 bg-gray-200 mx-2 hidden sm:block" />
-                        <span className="text-[12px] font-bold text-gray-500 uppercase tracking-widest hidden sm:block">Citizen Portal • v2.0</span>
+                        <span className="text-[12px] font-bold text-gray-500 uppercase tracking-widest hidden sm:block">{t('common.branding.portal_version')}</span>
                     </div>
                     <div className="flex items-center gap-4">
                         <NotificationCenter />
@@ -104,12 +106,12 @@ const CitizenDashboard = () => {
                 </div>
             </div>
 
-            <div className="container mx-auto px-6 max-w-7xl animate-in fade-in duration-500">
+            <div className="container mx-auto px-4 sm:px-6 max-w-7xl animate-in fade-in duration-500">
                 {/* Header & Main Actions */}
                 <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-10">
-                    <div>
+                    <div className="w-full lg:w-auto">
                         <h1 className="text-2xl sm:text-3xl font-bold text-[#111827] mb-2 font-['Plus_Jakarta_Sans',sans-serif]">{t('dashboard.welcome')}, {user?.name}</h1>
-                        <p className="text-sm text-gray-500 font-medium">Manage and track your official grievances through the secure portal.</p>
+                        <p className="text-sm text-gray-500 font-medium">{t('dashboard.manage_grievances')}</p>
                     </div>
                     <div className="flex gap-3 w-full lg:w-auto">
                         <Link to="/track" className="flex-1 lg:flex-none bg-white border border-gray-300 text-gray-700 px-6 py-3 rounded-lg font-bold text-sm hover:bg-gray-50 transition-all flex items-center justify-center gap-2 shadow-sm">
@@ -123,9 +125,9 @@ const CitizenDashboard = () => {
 
                 {/* Summary Metrics */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-10">
-                    <SummaryCard label="Total Grievances" value={complaints.length} color="blue" icon={<ClipboardList size={24} />} />
-                    <SummaryCard label="In-Progress" value={complaints.filter(c => c.status === 'In Progress').length} color="orange" icon={<Calendar size={24} />} />
-                    <SummaryCard label="Resolved Actions" value={complaints.filter(c => c.status === 'Resolved').length} color="green" icon={<CheckCircle2 size={24} />} />
+                    <SummaryCard label={t('dashboard.metrics.total')} value={complaints.length} color="blue" icon={<ClipboardList size={24} />} />
+                    <SummaryCard label={t('dashboard.metrics.in_progress')} value={complaints.filter(c => c.status === 'In Progress').length} color="orange" icon={<Calendar size={24} />} />
+                    <SummaryCard label={t('dashboard.metrics.resolved')} value={complaints.filter(c => c.status === 'Resolved').length} color="green" icon={<CheckCircle2 size={24} />} />
                 </div>
 
                 {/* Filters Row */}
@@ -147,24 +149,24 @@ const CitizenDashboard = () => {
                     </div>
                     <div className="flex flex-wrap items-center gap-4">
                         <div className="text-[11px] font-bold text-gray-400 uppercase tracking-wide">
-                            {filteredComplaints.length} Result{filteredComplaints.length !== 1 ? 's' : ''} found
+                            {t(filteredComplaints.length === 1 ? 'dashboard.results_found' : 'dashboard.results_found_plural', { count: filteredComplaints.length })}
                         </div>
                         <select 
                             className="px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:bg-white outline-none font-medium text-gray-700"
                             value={statusFilter}
                             onChange={(e) => setStatusFilter(e.target.value)}
                         >
-                            <option value="All">All Statuses</option>
-                            <option value="Pending">Pending</option>
-                            <option value="In Progress">In Progress</option>
-                            <option value="Resolved">Resolved</option>
+                            <option value="All">{t('dashboard.filters.all_statuses')}</option>
+                            <option value="Pending">{t('status.pending')}</option>
+                            <option value="In Progress">{t('status.in_progress')}</option>
+                            <option value="Resolved">{t('status.resolved')}</option>
                         </select>
                         <select 
                             className="px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:bg-white outline-none font-medium text-gray-700"
                             value={categoryFilter}
                             onChange={(e) => setCategoryFilter(e.target.value)}
                         >
-                            <option value="All">All Departments</option>
+                            <option value="All">{t('dashboard.filters.all_departments')}</option>
                             {departments.map(d => (
                                 <option key={d._id} value={d.departmentName}>{d.departmentName}</option>
                             ))}
@@ -176,11 +178,11 @@ const CitizenDashboard = () => {
                 <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
                     {/* Desktop Table Header */}
                     <div className="hidden lg:grid grid-cols-12 bg-gray-50 border-b border-gray-200 px-6 py-4">
-                        <div className="col-span-2 text-[11px] font-bold text-gray-400 uppercase tracking-wider">Ticket ID</div>
-                        <div className="col-span-4 text-[11px] font-bold text-gray-400 uppercase tracking-wider">Subject & Department</div>
-                        <div className="col-span-2 text-[11px] font-bold text-gray-400 uppercase tracking-wider">Priority</div>
-                        <div className="col-span-2 text-[11px] font-bold text-gray-400 uppercase tracking-wider">Status</div>
-                        <div className="col-span-2 text-right text-[11px] font-bold text-gray-400 uppercase tracking-wider">Actions</div>
+                        <div className="col-span-2 text-[11px] font-bold text-gray-400 uppercase tracking-wider">{t('dashboard.table.ticket_id')}</div>
+                        <div className="col-span-4 text-[11px] font-bold text-gray-400 uppercase tracking-wider">{t('dashboard.table.subject')}</div>
+                        <div className="col-span-2 text-[11px] font-bold text-gray-400 uppercase tracking-wider">{t('dashboard.table.priority')}</div>
+                        <div className="col-span-2 text-[11px] font-bold text-gray-400 uppercase tracking-wider">{t('dashboard.table.status')}</div>
+                        <div className="col-span-2 text-right text-[11px] font-bold text-gray-400 uppercase tracking-wider">{t('dashboard.table.actions')}</div>
                     </div>
 
                     <div className="divide-y divide-gray-100">
@@ -226,7 +228,7 @@ const CitizenDashboard = () => {
                                             onClick={() => navigate('/track', { state: { prefill: c.ticketId } })}
                                             className="px-4 py-2 border border-gray-200 text-gray-600 rounded-lg text-xs font-bold hover:bg-gray-100 hover:text-[#111827] transition-all flex items-center gap-2"
                                         >
-                                            View Details <ArrowRight size={14} />
+                                            {t('dashboard.view_details')} <ArrowRight size={14} />
                                         </button>
                                     </div>
                                 </div>
@@ -234,8 +236,8 @@ const CitizenDashboard = () => {
                         ) : (
                             <div className="py-20 text-center">
                                 <Search size={40} className="mx-auto text-gray-200 mb-4" />
-                                <h3 className="text-lg font-bold text-gray-900">No matching grievances</h3>
-                                <p className="text-sm text-gray-500 max-w-xs mx-auto">We couldn't find any records matching your search or filter criteria.</p>
+                                <h3 className="text-lg font-bold text-gray-900">{t('dashboard.no_matching')}</h3>
+                                <p className="text-sm text-gray-500 max-w-xs mx-auto">{t('dashboard.no_matching_desc')}</p>
                             </div>
                         )}
                     </div>
@@ -243,8 +245,8 @@ const CitizenDashboard = () => {
 
                 {/* Pagination Controls */}
                 {totalPages > 1 && (
-                    <div className="mt-8 flex items-center justify-between bg-white border border-gray-200 rounded-xl px-6 py-4 shadow-sm">
-                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest">
+                    <div className="mt-8 flex flex-col sm:flex-row items-center justify-between gap-4 bg-white border border-gray-200 rounded-xl px-4 sm:px-6 py-4 shadow-sm">
+                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest text-center sm:text-left">
                             Showing <span className="text-[#1D4ED8]">{currentItems.length}</span> of <span className="text-gray-900">{filteredComplaints.length}</span> records
                         </p>
                         <div className="flex gap-2">

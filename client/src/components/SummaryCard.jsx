@@ -17,7 +17,7 @@ const SummaryCard = ({ label, value, color, icon }) => {
     const config = configs[color] || configs.blue;
 
     return (
-        <div className={`bg-white border border-gray-200 ${config.border} border-l-4 p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group`}>
+        <div className={`bg-white border border-gray-200 ${config.border} border-l-4 p-4 sm:p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group`}>
             <div className="flex items-center justify-between">
                 <div>
                     <p className="text-[11px] font-bold text-gray-400 uppercase tracking-[0.1em] mb-1">{label}</p>

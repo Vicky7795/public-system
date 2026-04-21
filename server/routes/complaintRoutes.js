@@ -755,16 +755,16 @@ router.patch('/:id/reassign', auth, adminAuth, async (req, res) => {
         await User.findByIdAndUpdate(officerId, { $inc: { activeCasesCount: 1 } });
 
         complaint.assignedOfficerId = officerId;
-        complaint.status = 'Assigned';
+        complaint.status = 'Escalated';
         if (!complaint.notes) complaint.notes = [];
-        complaint.notes.push({ note: `ADMIN REASSIGNMENT: Moved to ${newOfficer.name}` });
+        complaint.notes.push({ note: `ADMIN ESCALATION: Moved and escalated to ${newOfficer.name}` });
         await complaint.save();
 
         // Notify New Officer
         await notificationService.send({
             recipientId: officerId,
             type: 'NEW_ASSIGNMENT',
-            message: `ADMIN ACTION: Case #${complaint.ticketId} has been reassigned to you.`,
+            message: `ADMIN ACTION: Case #${complaint.ticketId} has been ESCALATED to you.`,
             complaintId: complaint._id,
             priority: 'HIGH'
         });

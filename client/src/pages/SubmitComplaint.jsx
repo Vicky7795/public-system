@@ -85,35 +85,35 @@ const SubmitComplaint = () => {
         return (
             <div className="max-w-xl mx-auto mt-12 p-10 bg-white rounded-2xl shadow-xl text-center border-t-8 border-green-500 animate-in zoom-in duration-500">
                 <CheckCircle2 className="mx-auto text-green-500 mb-6" size={80} />
-                <h2 className="text-3xl font-bold mb-4 text-slate-800">Grievance Submitted!</h2>
-                <p className="text-slate-500 mb-8 font-medium">Your issue has been assigned to the relevant department based on its location and content.</p>
+                <h2 className="text-3xl font-bold mb-4 text-slate-800">{t('submit.success.title')}</h2>
+                <p className="text-slate-500 mb-8 font-medium">{t('submit.success.desc')}</p>
                 
                 <div className="bg-slate-50 p-6 rounded-xl mb-8 text-left space-y-3 border border-slate-200">
                     <p className="flex justify-between border-b pb-2">
-                        <strong className="text-slate-500 uppercase text-[10px] tracking-widest">Ticket ID:</strong> 
+                        <strong className="text-slate-500 uppercase text-[10px] tracking-widest">{t('submit.success.ticket_label')}:</strong> 
                         <span className="font-bold text-slate-800">#{successData.ticketId}</span>
                     </p>
                     <p className="flex justify-between border-b pb-2">
-                        <strong className="text-slate-500 uppercase text-[10px] tracking-widest">AI Category:</strong> 
+                        <strong className="text-slate-500 uppercase text-[10px] tracking-widest">{t('submit.success.category_label')}:</strong> 
                         <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-[10px] font-black">{successData.category}</span>
                     </p>
                     <p className="flex justify-between border-b pb-2">
-                        <strong className="text-slate-500 uppercase text-[10px] tracking-widest">Priority:</strong> 
+                        <strong className="text-slate-500 uppercase text-[10px] tracking-widest">{t('submit.success.priority_label')}:</strong> 
                         <span className={`px-3 py-1 rounded-full text-[10px] font-black ${successData.priorityLevel === 'High' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'}`}>
-                            {successData.priorityLevel || 'Medium'}
+                            {successData.priorityLevel || t('priority.medium')}
                         </span>
                     </p>
                     {successData.location?.address && (
                         <div className="pt-2">
-                            <strong className="text-slate-500 uppercase text-[10px] tracking-widest block mb-1">📍 Registered Location:</strong>
+                            <strong className="text-slate-500 uppercase text-[10px] tracking-widest block mb-1">📍 {t('submit.success.location_label')}:</strong>
                             <p className="text-slate-600 text-xs font-semibold leading-relaxed">{successData.location.address}</p>
                         </div>
                     )}
                 </div>
                 
                 <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                    <button onClick={() => navigate('/dashboard')} className="bg-[#1D4ED8] text-white px-8 py-3 rounded-lg font-bold hover:bg-[#1e40af] transition-all shadow-lg hover:shadow-blue-200">Go to Dashboard</button>
-                    <Link to="/track" state={{ prefill: successData.ticketId }} className="border-2 border-slate-200 text-slate-600 px-8 py-3 rounded-lg font-bold hover:bg-slate-50 transition-all">Track Status</Link>
+                    <button onClick={() => navigate('/dashboard')} className="bg-[#1D4ED8] text-white px-8 py-3 rounded-lg font-bold hover:bg-[#1e40af] transition-all shadow-lg hover:shadow-blue-200">{t('submit.success.back_to_dashboard')}</button>
+                    <Link to="/track" state={{ prefill: successData.ticketId }} className="border-2 border-slate-200 text-slate-600 px-8 py-3 rounded-lg font-bold hover:bg-slate-50 transition-all">{t('submit.success.track_status')}</Link>
                 </div>
             </div>
         );
@@ -154,25 +154,25 @@ const SubmitComplaint = () => {
                                 placeholder={t('submit.form_description_placeholder')}
                                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                             />
-                            <p className="text-[10px] text-slate-400 mt-2 font-bold italic">💡 Our AI will automatically route your grievance based on this description.</p>
+                            <p className="text-[10px] text-slate-400 mt-2 font-bold italic">💡 {t('submit.ai_hint')}</p>
                         </div>
 
                         <div>
-                            <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Nearest Landmark (Optional)</label>
+                            <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">{t('submit.form_landmark')}</label>
                             <input
                                 type="text"
-                                placeholder="e.g. Near Gandhi Park, Opp. Axis Bank"
+                                placeholder={t('submit.form_landmark_placeholder')}
                                 className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-govBlue focus:ring-4 focus:ring-blue-50 outline-none transition-all font-medium text-slate-800"
                                 value={formData.landmark}
                                 onChange={(e) => setFormData({ ...formData, landmark: e.target.value })}
                             />
-                            <p className="text-[9px] text-slate-400 mt-1.5 font-bold uppercase tracking-wide">Helps the officer find the exact spot faster.</p>
+                            <p className="text-[9px] text-slate-400 mt-1.5 font-bold uppercase tracking-wide">{t('submit.form_landmark_desc')}</p>
                         </div>
                     </div>
 
                     {/* Right Column: Evidence */}
                     <div>
-                        <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Visual Evidence</label>
+                        <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">{t('submit.evidence_label')}</label>
                         <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
 
                         {imagePreview ? (
@@ -183,7 +183,7 @@ const SubmitComplaint = () => {
                                     <X size={20} />
                                 </button>
                                 <div className="absolute bottom-4 left-4 right-4 bg-govBlue/90 backdrop-blur text-white text-[10px] font-black uppercase tracking-widest text-center py-2 rounded-lg shadow-xl">
-                                    Image Captured Successfully
+                                    {t('submit.image_success')}
                                 </div>
                             </div>
                         ) : (
@@ -193,8 +193,8 @@ const SubmitComplaint = () => {
                                     <Image size={48} className="text-slate-300 group-hover:text-govBlue transition-colors" />
                                 </div>
                                 <div className="text-center px-6">
-                                    <span className="block font-bold text-slate-600 group-hover:text-govBlue">Click to upload photo</span>
-                                    <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Max size 5MB (JPG, PNG)</span>
+                                    <span className="block font-bold text-slate-600 group-hover:text-govBlue">{t('submit.upload_btn')}</span>
+                                    <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{t('submit.upload_desc')}</span>
                                 </div>
                             </button>
                         )}
@@ -208,11 +208,11 @@ const SubmitComplaint = () => {
                     <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center justify-between">
                         <div className="flex items-center gap-2">
                             <MapPin size={14} className="text-govBlue" />
-                            Specify Incident Spot <span className="text-red-500">*</span>
+                            {t('submit.location_label')} <span className="text-red-500">*</span>
                         </div>
                         {location && (
                             <span className="flex items-center gap-1.5 text-[9px] font-black text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-100 uppercase animate-in fade-in slide-in-from-right-2">
-                                <CheckCircle2 size={10} /> Precision Verified
+                                <CheckCircle2 size={10} /> {t('submit.precision_verified')}
                             </span>
                         )}
                     </label>
@@ -230,15 +230,15 @@ const SubmitComplaint = () => {
                 <button type="submit" disabled={loading}
                     className="w-full bg-[#1D4ED8] text-white py-4 rounded-xl font-black text-lg hover:bg-[#1e40af] flex justify-center items-center gap-3 active:scale-[0.98] transition-all shadow-xl shadow-blue-100 disabled:opacity-60 disabled:pointer-events-none group">
                     {loading ? (
-                        <><Loader2 size={24} className="animate-spin" /> Finalising Submission...</>
+                        <><Loader2 size={24} className="animate-spin" /> {t('submit.submitting_btn')}</>
                     ) : (
-                        <><Send size={22} className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" /> Submit Official Grievance</>
+                        <><Send size={22} className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" /> {t('submit.submit_btn')}</>
                     )}
                 </button>
             </form>
 
             <footer className="mt-8 text-center bg-slate-50 py-4 rounded-xl border border-slate-100">
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">© 2026 • Government of India • Public Grievance Redressal System</p>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">{t('common.branding.copyright')}</p>
             </footer>
         </div>
     );

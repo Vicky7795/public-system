@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import api from '../utils/api';
 import BackButton from '../components/BackButton';
+import { useTranslation } from 'react-i18next';
 
 const statusConfig = {
     'Pending': { 
@@ -45,9 +46,9 @@ const statusConfig = {
     },
 };
 
-const STEPS = ['Submitted', 'Processing', 'Resolved'];
-
 const TrackTicket = () => {
+    const { t } = useTranslation();
+    const STEPS = [t('track.steps.submitted'), t('track.steps.processing'), t('track.steps.resolved')];
     const location = useLocation();
     const [ticketId, setTicketId] = useState('');
     const [result, setResult] = useState(null);
@@ -66,7 +67,7 @@ const TrackTicket = () => {
             setResult(data);
             if (data.rating) setFeedbackInput({ rating: data.rating, feedback: data.feedback });
         } catch (error) {
-            setError(error.response?.data?.message || 'Could not find a grievance with this ID.');
+            setError(error.response?.data?.message || t('track.error_not_found'));
             setResult(null);
         } finally {
             setLoading(false);
@@ -87,7 +88,7 @@ const TrackTicket = () => {
     };
 
     const handleReopen = async () => {
-        if (!window.confirm('Reopen this grievance for further review?')) return;
+        if (!window.confirm(t('track.reopen_confirm'))) return;
         try {
             const { data } = await api.patch(`/complaints/${result._id}/reopen`);
             setResult(data);
@@ -124,8 +125,8 @@ const TrackTicket = () => {
                 
                 {/* Search Section */}
                 <div className="mb-8">
-                    <h1 className="text-2xl md:text-3xl font-bold text-slate-900 mb-2">Track Your Grievance</h1>
-                    <p className="text-slate-500 text-sm mb-6">Enter your complaint reference ID below</p>
+                    <h1 className="text-2xl md:text-3xl font-bold text-slate-900 mb-2">{t('track.title')}</h1>
+                    <p className="text-slate-500 text-sm mb-6">{t('track.subtitle')}</p>
                     
                     <form onSubmit={handleTrack} className="flex gap-2">
                         <div className="relative flex-1">
@@ -133,7 +134,7 @@ const TrackTicket = () => {
                                 type="text"
                                 value={ticketId}
                                 onChange={(e) => setTicketId(e.target.value.toUpperCase())}
-                                placeholder="Enter Complaint ID"
+                                placeholder={t('track.placeholder')}
                                 className="w-full pl-11 pr-10 py-3 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 outline-none transition-all font-mono font-bold text-slate-700"
                             />
                             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
@@ -148,7 +149,7 @@ const TrackTicket = () => {
                             disabled={loading || !ticketId.trim()}
                             className="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-blue-700 transition-all disabled:opacity-50"
                         >
-                            {loading ? <Loader2 size={18} className="animate-spin" /> : 'Track'}
+                            {loading ? <Loader2 size={18} className="animate-spin" /> : t('track.btn')}
                         </button>
                     </form>
                 </div>
@@ -165,7 +166,7 @@ const TrackTicket = () => {
                         {/* Card Header */}
                         <div className="p-6 border-b border-slate-100 flex items-center justify-between">
                             <div>
-                                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Incident Reference</span>
+                                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">{t('track.reference_label')}</span>
                                 <h2 className="text-xl font-bold text-slate-900 font-mono tracking-tight">#{result.ticketId}</h2>
                             </div>
                             <div className={`px-3 py-1.5 rounded-full border text-xs font-bold flex items-center gap-1.5 ${cfg.color}`}>
@@ -198,18 +199,18 @@ const TrackTicket = () => {
 
                             {/* Details List */}
                             <div className="space-y-4 pt-4">
-                                <RowItem label="Category" value={result.category || 'General'} />
-                                <RowItem label="Priority" value={result.priorityLevel || 'Medium'} />
-                                <RowItem label="Filed On" value={new Date(result.createdAt).toLocaleDateString()} />
-                                <RowItem label="SLA Deadline" value={new Date(result.slaDeadline).toLocaleDateString()} />
-                                <RowItem label="Location" value={result.location?.address} isAddress />
+                                <RowItem label={t('track.category_label')} value={result.category || 'General'} />
+                                <RowItem label={t('track.priority_label')} value={result.priorityLevel || t('priority.medium')} />
+                                <RowItem label={t('track.filed_on_label')} value={new Date(result.createdAt).toLocaleDateString()} />
+                                <RowItem label={t('track.sla_label')} value={new Date(result.slaDeadline).toLocaleDateString()} />
+                                <RowItem label={t('track.location_label')} value={result.location?.address} isAddress />
                             </div>
 
                             {/* Department Contact Card (Exact Match to Design) */}
                             <div className="bg-[#F8FAFC] border border-[#E5E7EB] rounded-[18px] p-6">
                                 <div className="flex items-center gap-2 mb-4 text-[#94A3B8]">
                                     <Phone size={14} className="stroke-[3]" />
-                                    <span className="text-[10px] font-black uppercase tracking-[0.15em]">Department Contact</span>
+                                    <span className="text-[10px] font-black uppercase tracking-[0.15em]">{t('track.dept_contact_label')}</span>
                                 </div>
                                 {dept?.contactPhone ? (
                                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -228,7 +229,7 @@ const TrackTicket = () => {
                                                 }}
                                                 className="flex items-center gap-2 bg-[#2563EB] text-white px-5 py-2.5 rounded-[12px] font-bold text-[13px] hover:bg-blue-700 transition-all active:scale-95 shadow-sm shadow-blue-100"
                                             >
-                                                <Phone size={14} className="stroke-[3]" /> Call Now
+                                                <Phone size={14} className="stroke-[3]" /> {t('track.call_now')}
                                             </a>
                                             {dept.contactWhatsApp && (
                                                 <button 
@@ -241,13 +242,13 @@ const TrackTicket = () => {
                                         </div>
                                     </div>
                                 ) : (
-                                    <p className="text-xs text-[#94A3B8] font-medium italic">Contact details not available for this department yet.</p>
+                                    <p className="text-xs text-[#94A3B8] font-medium italic">{t('track.no_contact')}</p>
                                 )}
                             </div>
 
                             {/* Description Box */}
                             <div className="space-y-3">
-                                <label className="text-[12px] font-bold text-slate-400 uppercase tracking-widest">Grievance Description</label>
+                                <label className="text-[12px] font-bold text-slate-400 uppercase tracking-widest">{t('track.desc_label')}</label>
                                 <div className="bg-slate-50 border border-slate-100 rounded-xl p-4">
                                     <p className="text-slate-700 text-sm leading-relaxed">{result.description}</p>
                                 </div>
@@ -257,7 +258,7 @@ const TrackTicket = () => {
                             {result.status === 'Resolved' && result.proofImage && (
                                 <div className="space-y-3 pt-4 border-t border-slate-100">
                                     <label className="text-[12px] font-bold text-slate-700 uppercase tracking-widest flex items-center gap-2">
-                                        <CheckCircle2 size={14} className="text-emerald-500" /> Resolution Proof
+                                        <CheckCircle2 size={14} className="text-emerald-500" /> {t('track.proof_label')}
                                     </label>
                                     <div className="rounded-xl overflow-hidden border border-slate-200 bg-slate-100">
                                         <img src={result.proofImage} alt="proof" className="w-full h-auto max-h-64 object-cover" />
@@ -271,17 +272,17 @@ const TrackTicket = () => {
                             {/* Actions - Bottom of Card */}
                             <div className="pt-6 border-t border-slate-100 flex flex-col md:flex-row gap-3">
                                 <button onClick={() => window.print()} className="flex-1 flex items-center justify-center gap-2 px-4 py-3 border border-slate-200 rounded-xl font-bold text-sm text-slate-700 hover:bg-slate-50 transition-all">
-                                    <Download size={18} /> Download Receipt
+                                    <Download size={18} /> {t('track.download_receipt')}
                                 </button>
                                 <button className="flex-1 flex items-center justify-center gap-2 px-4 py-3 border border-slate-200 rounded-xl font-bold text-sm text-slate-700 hover:bg-slate-50 transition-all">
-                                    <Phone size={18} /> Contact Department
+                                    <Phone size={18} /> {t('track.contact_dept')}
                                 </button>
                             </div>
 
                             {/* Feedback Section (Only for Citizen on their own resolved ticket) */}
                             {result.status === 'Resolved' && !result.rating && (
                                 <div className="mt-8 p-6 bg-blue-50/50 rounded-2xl border border-blue-100 text-center">
-                                    <h4 className="font-bold text-slate-800 mb-4">Rate Resolution</h4>
+                                    <h4 className="font-bold text-slate-800 mb-4">{t('track.rate_title')}</h4>
                                     <div className="flex justify-center gap-2 mb-6">
                                         {[1, 2, 3, 4, 5].map(s => (
                                             <button key={s} onClick={() => setFeedbackInput({ ...feedbackInput, rating: s })} className="hover:scale-110 transition-transform">
@@ -293,10 +294,10 @@ const TrackTicket = () => {
                                         onClick={handleFeedback}
                                         className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold text-sm"
                                     >
-                                        {submittingFeedback ? 'Submitting...' : 'Submit Satisfaction Rating'}
+                                        {submittingFeedback ? t('common.auth.processing') : t('track.submit_rating')}
                                     </button>
                                     <button onClick={handleReopen} className="mt-4 text-[11px] text-red-500 font-bold uppercase tracking-widest hover:underline">
-                                        Not satisfied? Click here to reopen
+                                        {t('track.reopen_text')}
                                     </button>
                                 </div>
                             )}

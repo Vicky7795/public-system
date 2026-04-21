@@ -15,6 +15,13 @@ body {
   margin: 0;
   background-color: #f8fafc;
   color: #0f172a;
+  overflow-x: hidden;
+  width: 100%;
+}
+
+html {
+  overflow-x: hidden;
+  width: 100%;
 }
 
 /* Glassmorphism Utilities */
@@ -132,5 +139,19 @@ html {
   40%,
   60% {
     transform: translate3d(4px, 0, 0);
+  }
+}
+
+/* Responsive Table Wrapper */
+.table-responsive {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Container Refinements for Mobile */
+@media (max-width: 640px) {
+  .container {
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
   }
 }

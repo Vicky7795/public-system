@@ -60,11 +60,11 @@ const OfficerRegister = () => {
     };
 
     return (
-        <div className="flex flex-col items-center justify-center min-h-[calc(100vh-64px)] p-6 bg-slate-100">
-            <div className="w-full max-w-md mb-4 self-start sm:self-auto sm:ml-auto sm:mr-auto lg:ml-[calc(50%-224px)]">
+        <div className="flex flex-col items-center justify-center min-h-screen p-4 sm:p-6 bg-slate-100">
+            <div className="w-full max-w-md mb-4 flex justify-start">
                 <BackButton fallbackPath="/officer/login" />
             </div>
-            <div className="bg-white p-10 rounded-[2.5rem] shadow-2xl shadow-slate-200/50 w-full max-w-md border border-slate-200">
+            <div className="bg-white p-6 sm:p-10 rounded-[2rem] sm:rounded-[2.5rem] shadow-2xl shadow-slate-200/50 w-full max-w-md border border-slate-200">
                 <div className="flex justify-center mb-6">
                     <div className="bg-white p-3 rounded-2xl shadow-sm border border-slate-100">
                         <img src="/logo.png" alt="Government Logo" className="h-10 w-10 object-contain" />

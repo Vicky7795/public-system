@@ -34,7 +34,7 @@ app.use((req, res, next) => {
     res.header('Access-Control-Allow-Credentials', 'true');
     
     // Satisfy Google Sign-In COOP requirements - Changed for secure popup communication
-    res.header('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
+    // Removed COOP headers to prevent restricting window.postMessage for Google Auth popup
     // Removed strict Embedder Policy to prevent ERR_BLOCKED_BY_RESPONSE
 
     // Instantly return 200 for OPTIONS (Preflight)

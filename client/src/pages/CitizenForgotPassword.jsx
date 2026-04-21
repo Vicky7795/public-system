@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import api from '../utils/api';
 import { Mail, Phone, Lock, Loader2, ArrowLeft, CheckCircle2, AlertCircle, Eye, EyeOff, ShieldCheck } from 'lucide-react';
@@ -19,6 +20,7 @@ const CitizenForgotPassword = () => {
     const [passwordStrength, setPasswordStrength] = useState(0); // 0-3
     const [loading, setLoading] = useState(false);
     const [status, setStatus] = useState({ type: '', message: '' });
+    const { t } = useTranslation();
     const navigate = useNavigate();
 
     const checkPasswordStrength = (password) => {
@@ -36,10 +38,10 @@ const CitizenForgotPassword = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (formData.newPassword !== formData.confirmPassword) {
-            return setStatus({ type: 'error', message: 'Passwords do not match!' });
+            return setStatus({ type: 'error', message: t('common.auth.passwords_mismatch') });
         }
         if (passwordStrength < 1) {
-            return setStatus({ type: 'error', message: 'Password is too weak!' });
+            return setStatus({ type: 'error', message: t('common.auth.password_weak') });
         }
 
         setLoading(true);
@@ -52,10 +54,10 @@ const CitizenForgotPassword = () => {
                 newPassword: formData.newPassword,
                 emailOptIn: formData.emailOptIn
             });
-            setStatus({ type: 'success', message: data.message || 'Security key updated successfully' });
+            setStatus({ type: 'success', message: data.message || t('common.auth.reset_success') });
             setTimeout(() => navigate('/citizen/login'), 3000);
         } catch (error) {
-            setStatus({ type: 'error', message: error.response?.data?.message || 'Reset failed. Please verify your details.' });
+            setStatus({ type: 'error', message: error.response?.data?.message || t('common.auth.reset_failed') });
         } finally {
             setLoading(false);
         }
@@ -69,10 +71,10 @@ const CitizenForgotPassword = () => {
     };
 
     const getStrengthText = () => {
-        if (passwordStrength === 0) return 'Too Weak';
-        if (passwordStrength === 1) return 'Weak';
-        if (passwordStrength === 2) return 'Medium';
-        return 'Strong';
+        if (passwordStrength === 0) return t('common.auth.strength_levels.too_weak');
+        if (passwordStrength === 1) return t('common.auth.strength_levels.weak');
+        if (passwordStrength === 2) return t('common.auth.strength_levels.medium');
+        return t('common.auth.strength_levels.strong');
     };
 
     return (
@@ -85,11 +87,11 @@ const CitizenForgotPassword = () => {
                         className="flex items-center gap-2 text-gray-500 hover:text-[#1E3A8A] transition-colors group"
                     >
                         <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
-                        <span className="text-xs font-bold uppercase tracking-widest">Back</span>
+                        <span className="text-xs font-bold uppercase tracking-widest">{t('common.auth.home')}</span>
                     </button>
                     <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-100/50 text-[#1E3A8A] border border-blue-200/50">
                         <ShieldCheck size={14} />
-                        <span className="text-[10px] font-black uppercase tracking-wider">Secure Access</span>
+                        <span className="text-[10px] font-black uppercase tracking-wider">{t('common.auth.secured_session')}</span>
                     </div>
                 </div>
 
@@ -98,8 +100,8 @@ const CitizenForgotPassword = () => {
                     <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#1E3A8A] to-[#2563EB]" />
 
                     <div className="mb-10">
-                        <h1 className="text-2xl font-bold text-gray-900 leading-none tracking-[-0.4px] mb-2">Reset Password</h1>
-                        <p className="text-sm font-medium text-gray-500">Verify your identity to continue</p>
+                        <h1 className="text-2xl font-bold text-gray-900 leading-none tracking-[-0.4px] mb-2">{t('common.auth.reset_password')}</h1>
+                        <p className="text-sm font-medium text-gray-500">{t('common.auth.verify_identity')}</p>
                     </div>
 
                     {status.message && (
@@ -113,14 +115,14 @@ const CitizenForgotPassword = () => {
                     <form onSubmit={handleSubmit} className="space-y-6">
                         {/* Email - Editable */}
                         <div className="space-y-2">
-                            <label className="block text-[12px] font-semibold text-gray-700 uppercase tracking-[0.5px]">Registered Email</label>
+                            <label className="block text-[12px] font-semibold text-gray-700 uppercase tracking-[0.5px]">{t('common.auth.registered_email')}</label>
                             <div className="relative group">
                                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[#2563EB] transition-colors" size={16} />
                                 <input
                                     type="email" 
                                     required
                                     className="w-full pl-11 pr-4 py-3.5 rounded-xl border border-gray-200 focus:border-[#2563EB] focus:ring-4 focus:ring-blue-500/5 transition-all outline-none text-gray-800 font-medium text-sm placeholder:text-gray-300"
-                                    placeholder="Enter your email"
+                                    placeholder={t('common.auth.email_placeholder')}
                                     value={formData.email}
                                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                                 />
@@ -136,20 +138,20 @@ const CitizenForgotPassword = () => {
                                     />
                                     <div className="w-10 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#2563EB]"></div>
                                 </label>
-                                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Send confirmation to email</span>
+                                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">{t('common.auth.send_confirmation_email')}</span>
                             </div>
                         </div>
 
                         {/* Phone Number */}
                         <div className="space-y-2">
-                            <label className="block text-[12px] font-semibold text-gray-700 uppercase tracking-[0.5px]">Phone Number</label>
+                            <label className="block text-[12px] font-semibold text-gray-700 uppercase tracking-[0.5px]">{t('common.auth.phone_label')}</label>
                             <div className="relative group">
                                 <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[#2563EB] transition-colors" size={16} />
                                 <input
                                     type="tel" 
                                     required
                                     className="w-full pl-11 pr-4 py-3.5 rounded-xl border border-gray-200 focus:border-[#2563EB] focus:ring-4 focus:ring-blue-500/5 transition-all outline-none text-gray-800 font-medium text-sm placeholder:text-gray-300"
-                                    placeholder="+91-0000000000"
+                                    placeholder={t('common.auth.phone_placeholder')}
                                     value={formData.phone}
                                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                                 />
@@ -158,7 +160,7 @@ const CitizenForgotPassword = () => {
 
                         {/* New Password */}
                         <div className="space-y-2">
-                            <label className="block text-[12px] font-semibold text-gray-700 uppercase tracking-[0.5px]">New Password</label>
+                            <label className="block text-[12px] font-semibold text-gray-700 uppercase tracking-[0.5px]">{t('common.auth.new_password')}</label>
                             <div className="relative group">
                                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[#2563EB] transition-colors" size={16} />
                                 <input
@@ -166,7 +168,7 @@ const CitizenForgotPassword = () => {
                                     required
                                     autoComplete="new-password"
                                     className="w-full pl-11 pr-11 py-3.5 rounded-xl border border-gray-200 focus:border-[#2563EB] focus:ring-4 focus:ring-blue-500/5 transition-all outline-none text-gray-800 font-medium text-sm placeholder:text-gray-300"
-                                    placeholder="••••••••"
+                                    placeholder={t('common.auth.password_placeholder')}
                                     value={formData.newPassword}
                                     onChange={(e) => setFormData({ ...formData, newPassword: e.target.value })}
                                 />
@@ -182,7 +184,7 @@ const CitizenForgotPassword = () => {
                             {formData.newPassword && (
                                 <div className="mt-2 flex flex-col gap-1 px-1">
                                     <div className="flex justify-between items-center px-1">
-                                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Strength</span>
+                                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{t('common.auth.strength')}</span>
                                         <span className={`text-[10px] font-black uppercase tracking-widest ${passwordStrength === 3 ? 'text-green-500' : 'text-gray-400'}`}>
                                             {getStrengthText()}
                                         </span>
@@ -201,7 +203,7 @@ const CitizenForgotPassword = () => {
 
                         {/* Confirm Password */}
                         <div className="space-y-2">
-                            <label className="block text-[12px] font-semibold text-gray-700 uppercase tracking-[0.5px]">Confirm Password</label>
+                            <label className="block text-[12px] font-semibold text-gray-700 uppercase tracking-[0.5px]">{t('common.auth.confirm_password')}</label>
                             <div className="relative group">
                                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[#2563EB] transition-colors" size={16} />
                                 <input
@@ -209,7 +211,7 @@ const CitizenForgotPassword = () => {
                                     required
                                     autoComplete="new-password"
                                     className="w-full pl-11 pr-4 py-3.5 rounded-xl border border-gray-200 focus:border-[#2563EB] focus:ring-4 focus:ring-blue-500/5 transition-all outline-none text-gray-800 font-medium text-sm placeholder:text-gray-300"
-                                    placeholder="••••••••"
+                                    placeholder={t('common.auth.password_placeholder')}
                                     value={formData.confirmPassword}
                                     onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
                                 />
@@ -221,13 +223,13 @@ const CitizenForgotPassword = () => {
                             disabled={loading || status.type === 'success'}
                             className="w-full bg-gradient-to-r from-[#1E3A8A] to-[#2563EB] text-white py-4 rounded-xl font-bold text-sm uppercase tracking-widest shadow-lg shadow-blue-200 hover:shadow-blue-300 hover:-translate-y-0.5 transition-all flex justify-center items-center gap-3 mt-4 disabled:opacity-50 active:scale-[0.98]"
                         >
-                            {loading ? <Loader2 className="animate-spin" /> : "Update Password"}
+                            {loading ? <Loader2 className="animate-spin" /> : t('common.auth.update_password_btn')}
                         </button>
                     </form>
 
                     <div className="mt-8 pt-6 border-t border-gray-50 text-center">
                         <Link to="/citizen/login" className="text-xs font-bold text-[#1E3A8A] hover:underline uppercase tracking-widest">
-                            Return to Secure Login
+                            {t('common.auth.return_login')}
                         </Link>
                     </div>
                 </div>
@@ -235,9 +237,9 @@ const CitizenForgotPassword = () => {
                 {/* Footer Trust Indicators */}
                 <div className="mt-8 flex flex-col items-center gap-3 opacity-60">
                     <div className="flex items-center gap-2 text-[#1E3A8A] font-black text-[10px] uppercase tracking-[0.25em]">
-                        <ShieldCheck size={14} /> Secure Government Portal
+                        <ShieldCheck size={14} /> {t('common.auth.secure_gov_portal')}
                     </div>
-                    <p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest">Your data is encrypted and protected</p>
+                    <p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest">{t('common.auth.data_encrypted')}</p>
                 </div>
             </div>
         </div>

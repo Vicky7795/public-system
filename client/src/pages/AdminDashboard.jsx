@@ -5,7 +5,7 @@ import {
     Users, AlertTriangle, CheckCircle2, AlertCircle,
     LayoutDashboard, Building2, BarChart3, PieChart as PieIcon,
     Bell, Settings, LogOut, Plus, Clock, ShieldCheck, Edit2, Trash2,
-    Search, ChevronRight, TrendingUp, Activity, Loader2, X,
+    Search, ChevronRight, TrendingUp, Activity, Loader2, X, Menu,
     FileText, UserCheck, Percent, LayoutGrid, ArrowRight
 } from 'lucide-react';
 import {
@@ -53,6 +53,7 @@ const AdminDashboard = () => {
     const [officerError, setOfficerError] = useState('');
 
     const [selectedDept, setSelectedDept] = useState(null);
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
     useEffect(() => {
         const user = JSON.parse(localStorage.getItem('user'));
@@ -262,13 +263,27 @@ const AdminDashboard = () => {
     );
 
     return (
-        <div className="flex min-h-screen bg-[#F9FAFB]">
+        <div className="min-h-screen bg-[#F9FAFB]">
+            {/* Sidebar Backdrop for Mobile */}
+            {isSidebarOpen && (
+                <div 
+                    className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40 lg:hidden"
+                    onClick={() => setIsSidebarOpen(false)}
+                />
+            )}
+
             {/* Unified Fixed Sidebar */}
-            <aside className="w-64 bg-white border-r border-gray-200 flex flex-col fixed h-full z-20 shadow-sm">
+            <aside className={`w-64 bg-white border-r border-gray-200 flex flex-col fixed inset-y-0 left-0 z-50 shadow-xl lg:shadow-sm transition-transform duration-300 transform 
+                ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}>
                 <div className="p-6">
-                    <div className="flex items-center gap-2 mb-10">
-                        <div className="bg-[#1D4ED8] text-white p-2 rounded-lg shadow-md"><ShieldCheck size={20} /></div>
-                        <span className="text-lg font-bold tracking-tight text-slate-900 font-['Plus_Jakarta_Sans',sans-serif]">PGRS ADMIN</span>
+                    <div className="flex items-center justify-between mb-10">
+                        <div className="flex items-center gap-2">
+                            <div className="bg-[#1D4ED8] text-white p-2 rounded-lg shadow-md"><ShieldCheck size={20} /></div>
+                            <span className="text-lg font-bold tracking-tight text-slate-900 font-['Plus_Jakarta_Sans',sans-serif]">PGRS ADMIN</span>
+                        </div>
+                        <button onClick={() => setIsSidebarOpen(false)} className="lg:hidden p-2 text-gray-400 hover:bg-gray-50 rounded-lg">
+                            <X size={20} />
+                        </button>
                     </div>
                     
                     <nav className="space-y-1">
@@ -280,7 +295,7 @@ const AdminDashboard = () => {
                             { id: 'Analytics', icon: <BarChart3 size={18} />, label: 'System Analytics' },
                             { id: 'Settings', icon: <Settings size={18} />, label: 'Portal Config' },
                         ].map(({ id, icon, label }) => (
-                            <button key={id} onClick={() => setActiveTab(id)}
+                            <button key={id} onClick={() => { setActiveTab(id); setIsSidebarOpen(false); }}
                                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg font-bold text-[11px] uppercase tracking-widest transition-all
                                     ${activeTab === id ? 'bg-[#1D4ED8] text-white shadow-md' : 'text-gray-400 hover:bg-gray-50 hover:text-[#111827]'}`}>
                                 {icon} <span className="flex-1 text-left">{label}</span>
@@ -307,15 +322,23 @@ const AdminDashboard = () => {
             </aside>
 
             {/* Main Content Area */}
-            <main className="flex-1 min-w-0 ml-64 p-10 max-w-7xl">
+            <main className="flex-1 min-w-0 ml-0 lg:ml-64 p-4 sm:p-6 lg:p-10 max-w-7xl transition-all duration-300">
                 <header className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-6 mb-10">
-                    <div>
-                        <div className="flex items-center gap-4 mb-2">
-                            <BackButton fallbackPath="/" />
-                            <div className="w-px h-6 bg-gray-200" />
-                            <p className="text-[11px] font-bold text-[#1D4ED8] uppercase tracking-[0.3em]">Operational Control Terminal</p>
+                    <div className="flex items-center gap-4 w-full lg:w-auto">
+                        <button 
+                            onClick={() => setIsSidebarOpen(true)}
+                            className="lg:hidden p-2 bg-white border border-gray-200 rounded-lg shadow-sm text-gray-600 hover:bg-gray-50 transition-all"
+                        >
+                            <Menu size={20} />
+                        </button>
+                        <div className="flex-1 lg:flex-none">
+                            <div className="flex items-center gap-4 mb-2">
+                                <BackButton fallbackPath="/" />
+                                <div className="w-px h-6 bg-gray-200" />
+                                <p className="text-[11px] font-bold text-[#1D4ED8] uppercase tracking-[0.3em]">Operational Control Terminal</p>
+                            </div>
+                            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight font-['Plus_Jakarta_Sans',sans-serif]">{activeTab}</h1>
                         </div>
-                        <h1 className="text-3xl font-bold text-slate-900 tracking-tight font-['Plus_Jakarta_Sans',sans-serif]">{activeTab}</h1>
                     </div>
                     
                         <div className="flex items-center gap-3 w-full sm:w-auto">
@@ -359,10 +382,10 @@ const AdminDashboard = () => {
                                 <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-6 flex items-center gap-2">
                                     <PieIcon size={14} className="text-[#1D4ED8]" /> Resolution Status Split
                                 </h3>
-                                <div className="h-56 min-w-0">
+                                <div className="h-[300px] min-w-0">
                                     {mounted && (
-                                        <div className="h-[300px] w-full mt-6">
-                                            <ResponsiveContainer width="100%" height={300} minWidth={0} debounce={1}>
+                                        <div className="h-full w-full">
+                                            <ResponsiveContainer width="100%" height={250} debounce={50}>
                                                 <PieChart>
                                                     <Pie data={statusPie} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
                                                         {statusPie.map((entry, index) => <Cell key={index} fill={entry.color} />)}
@@ -385,10 +408,10 @@ const AdminDashboard = () => {
                                 <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-6 flex items-center gap-2">
                                     <TrendingUp size={14} className="text-[#1D4ED8]" /> Six-Month Intake Trend
                                 </h3>
-                                <div className="h-72 min-w-0">
+                                <div className="h-[300px] min-w-0">
                                     {mounted && (
-                                        <div className="h-[300px] w-full">
-                                            <ResponsiveContainer width="100%" height={300} minWidth={0} debounce={1}>
+                                        <div className="h-full w-full">
+                                            <ResponsiveContainer width="100%" height={250} debounce={50}>
                                                 <LineChart data={monthlyData}>
                                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
                                                     <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#94A3B8', fontSize: 10, fontWeight: 700 }} />
@@ -561,7 +584,7 @@ const AdminDashboard = () => {
                                 </h3>
                                 <div className="h-64 min-w-0 overflow-hidden">
                                     {mounted && (
-                                        <ResponsiveContainer width="100%" height={256} minWidth={0} debounce={50}>
+                                        <ResponsiveContainer width="100%" height={256} debounce={50}>
                                             <BarChart data={departments.map(d => ({ name: d.departmentName.split(' ')[0], total: d.totalComplaints || 0, resolved: d.resolved || 0 }))}>
                                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
                                                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#94A3B8', fontSize: 10, fontWeight: 700 }} />

@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { User, LogOut, Menu, X, ShieldCheck, Home, ClipboardList, LayoutDashboard } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 const Navbar = () => {
+    const { t } = useTranslation();
     const navigate = useNavigate();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [scrolled, setScrolled] = useState(false);
@@ -37,17 +39,16 @@ const Navbar = () => {
                         <img src="/logo.png" alt="Government Logo" className="h-8 w-auto" />
                     </div>
                     <div className="flex flex-col">
-                        <span className="text-white font-black text-xs uppercase tracking-widest leading-none mb-1">Government of India</span>
-                        <span className="text-white font-black text-[10px] sm:text-xs opacity-80 uppercase tracking-tighter">AI Public Grievance System</span>
+                        <span className="text-white font-black text-xs uppercase tracking-widest leading-none mb-1">{t('common.branding.government')}</span>
+                        <span className="text-white font-black text-[10px] sm:text-xs opacity-80 uppercase tracking-tighter">{t('common.branding.system_name')}</span>
                     </div>
                 </Link>
 
                 {/* Desktop Menu */}
                 <div className="hidden lg:flex gap-4 items-center">
-                    <NavLink to="/" icon={<Home size={16} />} text="Home" />
                     {token ? (
                         <>
-                            <NavLink to={dashboardLink} icon={<LayoutDashboard size={16} />} text="Dashboard" />
+                            <NavLink to={dashboardLink} icon={<LayoutDashboard size={16} />} text={t('common.auth.dashboard')} />
                             <div className="w-px h-6 bg-white/20 mx-2" />
                             <div className="flex items-center gap-3 bg-white/10 px-4 py-2 rounded-2xl border border-white/10">
                                 <span className="text-xs font-black uppercase tracking-widest text-blue-100">{user?.name}</span>
@@ -56,16 +57,7 @@ const Navbar = () => {
                                 </button>
                             </div>
                         </>
-                    ) : (
-                        <div className="flex gap-3">
-                            <Link to="/citizen/login" className="text-white hover:text-blue-100 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all">
-                                Citizen login
-                            </Link>
-                            <Link to="/officer/login" className="bg-white text-govBlue px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest shadow-lg shadow-blue-900/20 hover:shadow-xl hover:-translate-y-0.5 transition-all">
-                                Officer Entry
-                            </Link>
-                        </div>
-                    )}
+                    ) : null}
                 </div>
 
                 {/* Mobile Toggle */}
@@ -81,30 +73,20 @@ const Navbar = () => {
             {isMenuOpen && (
                 <div className="lg:hidden absolute top-full left-0 w-full bg-govBlue border-t border-white/10 shadow-2xl animate-in slide-in-from-top-4 duration-300">
                     <div className="p-6 space-y-4">
-                        <MobileNavLink to="/" text="Home" onClick={() => setIsMenuOpen(false)} />
                         {token ? (
                             <>
-                                <MobileNavLink to={dashboardLink} text="Your Dashboard" onClick={() => setIsMenuOpen(false)} />
+                                <MobileNavLink to={dashboardLink} text={t('common.auth.dashboard')} onClick={() => setIsMenuOpen(false)} />
                                 <div className="pt-4 border-t border-white/10">
                                     <p className="text-[10px] font-black text-blue-200 uppercase tracking-widest mb-3">System Access</p>
                                     <button
                                         onClick={handleLogout}
                                         className="w-full flex items-center justify-center gap-2 bg-red-500/10 text-red-400 py-3 rounded-2xl font-black text-xs uppercase tracking-widest border border-red-500/20"
                                     >
-                                        <LogOut size={16} /> Terminate Session
+                                        <LogOut size={16} /> {t('common.auth.terminate')}
                                     </button>
                                 </div>
                             </>
-                        ) : (
-                            <div className="grid grid-cols-2 gap-3 pt-2">
-                                <Link to="/citizen/login" className="bg-white/10 text-white p-4 rounded-2xl text-center font-black text-[10px] uppercase tracking-widest border border-white/10" onClick={() => setIsMenuOpen(false)}>
-                                    Citizen
-                                </Link>
-                                <Link to="/officer/login" className="bg-white text-govBlue p-4 rounded-2xl text-center font-black text-[10px] uppercase tracking-widest shadow-xl" onClick={() => setIsMenuOpen(false)}>
-                                    Officer
-                                </Link>
-                            </div>
-                        )}
+                        ) : null}
                     </div>
                 </div>
             )}
