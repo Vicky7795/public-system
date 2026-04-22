@@ -202,32 +202,26 @@ router.get('/ip-location', async (req, res) => {
 
 
 
-// Keyword mapping: category key MUST exactly match department name in DB
-const CATEGORY_KEYWORDS = {
-    'Transport': ['transport', 'traffic', 'bus', 'auto', 'vehicle', 'road accident', 'license', 'signal', 'crossing', 'parking', 'rickshaw', 'rto'],
-    'Agriculture': ['agriculture', 'agri', 'farm', 'crop', 'farmer', 'irrigation', 'pest', 'fertilizer', 'subsidy', 'harvest', 'soil', 'canal', 'livestock', 'farming'],
-    'Revenue': ['revenue', 'property tax', 'land record', 'certificate', 'mutation', 'caste', 'ration card', 'income', 'patwari', 'tehsil', 'tax'],
-    'Social': ['welfare', 'social', 'pension', 'ration', 'bpl', 'disabled', 'mnrega', 'aadhaar', 'scheme', 'poverty', 'orphan'],
-    'Police': ['police', 'crime', 'theft', 'robbery', 'law', 'order', 'fir', 'drug', 'harassment', 'safety', 'fight', 'steal', 'threat', 'cop'],
-    'Forest': ['forest', 'tree', 'wildlife', 'poach', 'mining', 'deforest', 'ecology', 'timber', 'nature', 'animal', 'reserve'],
-    'Water': ['water', 'leak', 'pipeline', 'tanker', 'sewage', 'pipe', 'tap', 'drain', 'pressure', 'clog', 'burst', 'overflow', 'plumb', 'water supply', 'damaged pipe', 'broken pipe'],
-    'Electricity': ['electr', 'power', 'voltage', 'light', 'energy', 'transformer', 'cut', 'bill', 'street light', 'streetlight', 'pole', 'current', 'wire', 'shock', 'short circuit', 'spark', 'bulb', 'lighting', 'electricity', 'fuse', 'meter'],
-    'PWD': ['pwd', 'public works', 'road', 'pothole', 'bridge', 'pavement', 'highway', 'asphalt', 'tar', 'concrete', 'infrastructure', 'footpath'],
-    'Municipal': ['municipal', 'garbage', 'sanit', 'waste', 'sewer', 'drain', 'clean', 'trash', 'dump', 'smell', 'mosquito', 'litter', 'plastic', 'sanitation'],
-    'Health': ['health', 'hospital', 'clinic', 'medical', 'disease', 'dengue', 'vaccine', 'medicine', 'doctor', 'nurse', 'ambulance', 'emergency', 'outbreak'],
-    'Education': ['education', 'school', 'teacher', 'student', 'scholarship', 'midday', 'exam', 'bench', 'class', 'college', 'uniform']
+// Keyword mapping: STRICT sequence for Translate -> Then Route mapping.
+const STRICT_CATEGORY_KEYWORDS = {
+    'Electricity': ['electricity', 'light', 'power', 'current', 'transformer', 'wire', 'shock', 'spark', 'bulb', 'meter', 'fuse', 'voltage'],
+    'Water': ['water', 'pipe', 'leakage', 'supply', 'tanker', 'tap', 'drain', 'pressure', 'overflow', 'plumb'],
+    'Road': ['road', 'pothole', 'सड़क', 'road damage', 'bridge', 'pavement', 'highway', 'asphalt', 'tar', 'concrete', 'footpath'],
+    'Sanitation': ['sanitation', 'garbage', 'waste', 'cleaning', 'clean', 'trash', 'dump', 'smell', 'mosquito', 'litter', 'plastic'],
+    'Drainage': ['drainage', 'sewer', 'blockage', 'drain', 'clog'],
+    'Garbage': ['garbage', 'trash', 'dustbin', 'bin', 'dump', 'waste'],
+    'Other': []
 };
 
 /**
- * Local keyword-based classifier as a fallback for the AI service.
- * Returns the most likely category based on keyword density.
+ * Calculates category match density for keywords over translated text
  */
-const classifyTextByKeywords = (text) => {
-    let bestCategory = null;
+const checkCategoryByKeywords = (translatedText) => {
+    let bestCategory = 'Other';
     let maxMatches = 0;
-    const lowerText = text.toLowerCase();
+    const lowerText = translatedText.toLowerCase();
 
-    for (const [category, keywords] of Object.entries(CATEGORY_KEYWORDS)) {
+    for (const [category, keywords] of Object.entries(STRICT_CATEGORY_KEYWORDS)) {
         let score = 0;
         for (const kw of keywords) {
             if (lowerText.includes(kw.toLowerCase())) {
@@ -239,56 +233,22 @@ const classifyTextByKeywords = (text) => {
             bestCategory = category;
         }
     }
-
-    console.log(`[Classification] Keyword fallback chose: ${bestCategory}`);
-    return bestCategory;
+    
+    // Require at least 1 keyword match for confidence
+    if (maxMatches >= 1) {
+        return { category: bestCategory, confidence: 0.95 }; // High confidence if directly mapped
+    } else {
+        return { category: 'Other', confidence: 0.0 }; // Force AI fallback logic later
+    }
 };
 
-// Smart department lookup: exact match first, then keyword fallback
-const findDepartmentForCategory = async (Department, category) => {
-    if (!category) {
-        console.log(`[Department Discovery] Category is empty. Skipping lookup.`);
-        return null;
-    }
-
-    console.log(`[Department Discovery] Seeking department for category: "${category}"`);
-
-    // 1. Try exact match (case-insensitive)
+// Smart strict department lookup
+const findStrictDepartment = async (Department, category) => {
     let dept = await Department.findOne({ departmentName: new RegExp(`^${category}$`, 'i') });
-    if (dept) {
-        console.log(`[Department Discovery] Exact Match found: "${dept.departmentName}"`);
-        return dept;
+    if (!dept) {
+        dept = await Department.findOne({ departmentName: new RegExp(`^Other$`, 'i') });
     }
-
-    // 2. Try partial match on department name
-    dept = await Department.findOne({ departmentName: new RegExp(category, 'i') });
-    if (dept) {
-        console.log(`[Department Discovery] Partial Match found: "${dept.departmentName}" for input "${category}"`);
-        return dept;
-    }
-
-    // 3. Try mapping via CATEGORY_KEYWORDS
-    for (const [deptKey, keywords] of Object.entries(CATEGORY_KEYWORDS)) {
-        if (category.toLowerCase().includes(deptKey.toLowerCase()) || deptKey.toLowerCase().includes(category.toLowerCase())) {
-            dept = await Department.findOne({ departmentName: new RegExp(deptKey, 'i') });
-            if (dept) {
-                console.log(`[Department Discovery] Mapping Match found: "${dept.departmentName}" via key "${deptKey}"`);
-                return dept;
-            }
-        }
-        for (const kw of keywords) {
-            if (category.toLowerCase().includes(kw.toLowerCase())) {
-                dept = await Department.findOne({ departmentName: new RegExp(deptKey, 'i') });
-                if (dept) {
-                    console.log(`[Department Discovery] Keyword Mapping Match found: "${dept.departmentName}" via keyword "${kw}"`);
-                    return dept;
-                }
-            }
-        }
-    }
-
-    console.warn(`[Department Discovery] FAILED to resolve any department for category: "${category}"`);
-    return null;
+    return dept;
 };
 
 // 1. Static GET Routes (Highest Priority)
@@ -375,7 +335,7 @@ router.post('/', auth, async (req, res) => {
             hasLocation: !!location,
             address: location?.address
         });
-
+        
         // 0. Base Input Validation
         if (!title || typeof title !== 'string' || title.trim().length < 5) {
             return res.status(400).json({ message: "A descriptive title (min 5 chars) is required." });
@@ -388,85 +348,128 @@ router.post('/', auth, async (req, res) => {
         }
 
         let resolvedLocation = { ...location };
-        let category = null;
-        let priority = "Medium";
-        let departmentId = null;
-        
-        let translatedTitle = title;
-        let translatedDescription = description;
-
         const combinedInput = `${title} ${description}`;
+        
+        let finalTranslatedTitle = title;
+        let finalTranslatedDescription = description;
+        let finalCategory = 'Other';
+        let routingConfidence = 0.0;
+        let priority = "Medium";
+
         const hasAI = !!process.env.OPENAI_API_KEY;
+        const TranslationCache = require('../models/TranslationCache');
+        const inputHash = crypto.createHash('sha256').update(combinedInput + language).digest('hex');
 
-        // 1. Classification & Translation
-        // If English, try local keyword matching first to save API calls
-        if (language === 'en') {
-            category = classifyTextByKeywords(combinedInput);
-        }
+        // STEP 1: TRANSLATION LAYER
+        if (language !== 'en' && hasAI) {
+            const cached = await TranslationCache.findOne({ textHash: inputHash });
+            if (cached) {
+                finalTranslatedTitle = cached.translatedText.split('|||')[0] || title;
+                finalTranslatedDescription = cached.translatedText.split('|||')[1] || description;
+            } else {
+                let translationSuccess = false;
+                for (let attempt = 1; attempt <= 2 && !translationSuccess; attempt++) {
+                    try {
+                        const trPrompt = `You are a professional translator. Translate the following complaint Title and Description into clear, readable English. Do not literally translate word-for-word if the meaning gets lost. Keep the tone professional.
+Return exactly valid JSON: { "translatedTitle": "string", "translatedDescription": "string" }`;
+                        
+                        const aiT = await axios.post('https://api.openai.com/v1/chat/completions', {
+                            model: 'gpt-4o-mini',
+                            messages: [
+                                { role: 'system', content: trPrompt },
+                                { role: 'user', content: `Title: ${title}\nDescription: ${description}` }
+                            ],
+                            temperature: 0.1,
+                            response_format: { type: 'json_object' }
+                        }, { headers: { 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}` }, timeout: 8000 });
 
-        // If not English, or if English keyword matching failed, try AI (ONLY IF KEY EXISTS)
-        if ((!category || language !== 'en') && hasAI) {
-            try {
-                const systemPrompt = `You are an expert civic grievance analyzer and translator.
-1. Strictly classify the complaint into ONE of these precise categories: Transport, Agriculture, Revenue, Social, Police, Forest, Water, Electricity, PWD, Municipal, Health, Education.
-2. Determine Priority: Low, Medium, High, Emergency.
-3. Translate the title and description into clear, professional English. If it is already in English, return it identically.
-Return ONLY JSON: { "category": "category string", "priority": "priority string", "translatedTitle": "string", "translatedDescription": "string" }`;
+                        const pd = JSON.parse(aiT.data.choices[0].message.content);
+                        finalTranslatedTitle = pd.translatedTitle || title;
+                        finalTranslatedDescription = pd.translatedDescription || description;
+                        translationSuccess = true;
 
-                const aiResponse = await axios.post(
-                    'https://api.openai.com/v1/chat/completions',
-                    {
-                        model: 'gpt-4o-mini',
-                        messages: [
-                            { role: 'system', content: systemPrompt },
-                            { role: 'user', content: `Title: ${title}\nDescription: ${description}` }
-                        ],
-                        temperature: 0.2,
-                        response_format: { type: 'json_object' }
-                    },
-                    {
-                        headers: {
-                            'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
-                            'Content-Type': 'application/json'
-                        },
-                        timeout: 8000
+                        // Cache it
+                        await new TranslationCache({
+                            textHash: inputHash,
+                            originalText: combinedInput,
+                            translatedText: `${finalTranslatedTitle}|||${finalTranslatedDescription}`,
+                            language
+                        }).save();
+
+                    } catch (e) {
+                        console.error(`[Translation] Failed attempt ${attempt}. Error:`, e.message);
                     }
-                );
-
-                const parsedData = JSON.parse(aiResponse.data.choices[0].message.content);
-                category = parsedData.category;
-                priority = parsedData.priority || "Medium";
-                translatedTitle = parsedData.translatedTitle || title;
-                translatedDescription = parsedData.translatedDescription || description;
-            } catch (aiErr) {
-                console.error("[POST /complaints] AI failure during active mode:", aiErr.message);
-                // Fallback to local keywords since AI call failed
-                category = category || classifyTextByKeywords(combinedInput);
+                }
+                if (!translationSuccess) {
+                    console.log("[Translation] Complete failure, proceeding with original text.");
+                }
             }
-        } else if (!hasAI) {
-            // FORCE FREE MODE
-            console.log("[MODE] Grievance processed in FREE MODE (Key missing)");
-            category = category || classifyTextByKeywords(combinedInput);
         }
 
-        // 2. Department Resolution
-        const department = await findDepartmentForCategory(Department, category);
+        // STEP 2: ROUTING LAYER (Confidence-Based Keyword Matching on translated text)
+        const combinedEnglishText = `${finalTranslatedTitle} ${finalTranslatedDescription}`;
+        let keywordResult = checkCategoryByKeywords(combinedEnglishText);
+        
+        finalCategory = keywordResult.category;
+        routingConfidence = keywordResult.confidence;
+
+        // Backup AI Classification if confidence < 0.8
+        if (routingConfidence < 0.80 && hasAI) {
+            try {
+                const aiCPrompt = `You are an expert grievance classifier.
+1. Strictly classify this complaint into exactly ONE of the following: Electricity, Water, Road, Sanitation, Drainage, Garbage, Other.
+2. Provide a confidence score between 0.0 and 1.0.
+3. Determine Priority: Low, Medium, High, Emergency.
+If the text makes no sense, or is a test string, classify as 'Other' with 0.0 confidence.
+Return ONLY valid JSON: { "category": "category string", "confidence": number, "priority": "priority string" }`;
+
+                const aiC = await axios.post('https://api.openai.com/v1/chat/completions', {
+                    model: 'gpt-4o-mini',
+                    messages: [
+                        { role: 'system', content: aiCPrompt },
+                        { role: 'user', content: combinedEnglishText }
+                    ],
+                    temperature: 0.1, // extremely deterministic
+                    response_format: { type: 'json_object' }
+                }, { headers: { 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}` }, timeout: 8000 });
+
+                const pc = JSON.parse(aiC.data.choices[0].message.content);
+                // Validation of returned category
+                if (STRICT_CATEGORY_KEYWORDS[pc.category] || pc.category === 'Other') {
+                    finalCategory = pc.category;
+                    routingConfidence = parseFloat(pc.confidence) || 0;
+                    if (pc.priority) priority = pc.priority;
+                }
+            } catch (e) {
+                console.error("[Classification Backup] Failed.", e.message);
+            }
+        }
+
+        // Final Confidence Gate
+        if (routingConfidence < 0.80) {
+            finalCategory = 'Other';
+        }
+
+        // Department Resolution
+        const department = await findStrictDepartment(Department, finalCategory);
         if (!department) {
-            return res.status(400).json({ message: "We could not automatically assign your grievance. Please provide more specific details." });
+            // Ultimate fallback safety
+            return res.status(400).json({ message: "System configuration error. Please contact administrative staff." });
         }
         
-        departmentId = department._id;
+        const departmentId = department._id;
 
-        // 3. Create Complaint (Save First)
+        // 3. Create & Save Complaint
         const newComplaint = new Complaint({
             userId: req.user.id,
             ticketId: generateTicketId(),
-            title: translatedTitle, // Default to english for primary UI
-            description: translatedDescription, 
+            title: finalTranslatedTitle, 
+            description: finalTranslatedDescription, 
             originalText: combinedInput,
-            translatedText: `${translatedTitle} - ${translatedDescription}`,
+            translatedText: combinedEnglishText,
             language: language,
-            category,
+            confidence: routingConfidence,
+            category: finalCategory,
             departmentId,
             priorityLevel: priority,
             location: {
@@ -479,7 +482,7 @@ Return ONLY JSON: { "category": "category string", "priority": "priority string"
         });
         await newComplaint.save();
 
-        // 4. Trigger Auto-Assignment Service
+        // 4. Trigger Auto-Assignment 
         await assignmentService.assignToOfficer(newComplaint, departmentId);
 
         // 5. Final Fetch for Response

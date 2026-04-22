@@ -15,6 +15,7 @@ const complaintSchema = new mongoose.Schema({
     originalText: { type: String }, // Raw description in native language
     translatedText: { type: String }, // English translation
     language: { type: String, default: 'en' }, // Code of selected language (en, hi, ta)
+    confidence: { type: Number, min: 0, max: 1 }, // Added for automatic routing threshold
 
     location: {
         lat: { type: Number },
