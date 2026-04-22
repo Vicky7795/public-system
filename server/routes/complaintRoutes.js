@@ -244,10 +244,25 @@ const checkCategoryByKeywords = (translatedText) => {
 
 // Smart strict department lookup
 const findStrictDepartment = async (Department, category) => {
+    console.log(`[Router] Attempting to find department for category: "${category}"`);
     let dept = await Department.findOne({ departmentName: new RegExp(`^${category}$`, 'i') });
+    
     if (!dept) {
+        console.log(`[Router] Strict match failed. Falling back to "Other".`);
         dept = await Department.findOne({ departmentName: new RegExp(`^Other$`, 'i') });
     }
+    
+    if (!dept) {
+        console.log(`[Router] RegEx "Other" failed. Trying explicit exact match.`);
+        dept = await Department.findOne({ departmentName: 'Other' });
+    }
+
+    if (!dept) {
+        console.log(`[Router] Explicit match failed. Finding ANY department as safety net.`);
+        dept = await Department.findOne(); // Grab whatever is available to prevent system crash
+        if (dept) console.log(`[Router] Safety Net kicked in. Selected: ${dept.departmentName}`);
+    }
+    
     return dept;
 };
 
