@@ -202,63 +202,89 @@ router.get('/ip-location', async (req, res) => {
 
 
 
-// Keyword mapping: STRICT sequence for Translate -> Then Route mapping.
-const STRICT_CATEGORY_KEYWORDS = {
-    'Electricity': ['electricity', 'light', 'power', 'current', 'transformer', 'wire', 'shock', 'spark', 'bulb', 'meter', 'fuse', 'voltage'],
-    'Water': ['water', 'pipe', 'leakage', 'supply', 'tanker', 'tap', 'drain', 'pressure', 'overflow', 'plumb'],
-    'Road': ['road', 'pothole', 'सड़क', 'road damage', 'bridge', 'pavement', 'highway', 'asphalt', 'tar', 'concrete', 'footpath'],
-    'Sanitation': ['sanitation', 'garbage', 'waste', 'cleaning', 'clean', 'trash', 'dump', 'smell', 'mosquito', 'litter', 'plastic'],
-    'Drainage': ['drainage', 'sewer', 'blockage', 'drain', 'clog'],
-    'Garbage': ['garbage', 'trash', 'dustbin', 'bin', 'dump', 'waste'],
-    'Other': []
+// Keyword mapping: Deep weighted dictionary for Translate -> Then Route mapping.
+const CATEGORY_DICTIONARY = {
+    'Electricity': {
+        phrases: ['street light not working', 'power cut', 'no electricity', 'transformer spark', 'short circuit', 'current lag', 'wire break'],
+        keywords: ['electricity', 'light', 'power', 'current', 'wire', 'shock', 'fuse', 'meter', 'bijli', 'voltage']
+    },
+    'Water': {
+        phrases: ['no water', 'pipe broken', 'water leak', 'polluted water', 'drinking water', 'paani nahi'],
+        keywords: ['water', 'pipe', 'leakage', 'supply', 'tap', 'plumb', 'paani', 'jal', 'tanker', 'drain', 'pressure', 'overflow']
+    },
+    'PWD': {
+        phrases: ['bad road', 'road construction', 'huge pothole', 'broken pavement', 'road damage'],
+        keywords: ['road', 'pothole', 'rasta', 'khadda', 'bridge', 'pavement', 'highway', 'asphalt', 'footpath', 'tar', 'concrete', 'सड़क']
+    },
+    'Sanitation': {
+        phrases: ['not cleaned', 'dead animal', 'bad smell', 'public toilet'],
+        keywords: ['sanitation', 'cleaning', 'clean', 'smell', 'mosquito', 'hygiene', 'toilet', 'swachh']
+    },
+    'Drainage': {
+        phrases: ['drainage overflowing', 'sewer block', 'gutter overflow', 'water logging'],
+        keywords: ['drainage', 'sewer', 'blockage', 'drain', 'clog', 'gutter']
+    },
+    'Garbage': {
+        phrases: ['garbage dump', 'trash bin full', 'waste burn', 'kachra truck'],
+        keywords: ['garbage', 'trash', 'dustbin', 'bin', 'dump', 'waste', 'kachra', 'plastic', 'litter']
+    }
 };
 
 /**
- * Calculates category match density for keywords over translated text
+ * Calculates weighted match density for keywords and phrases over translated text.
+ * Phrase match = 3 points. Keyword match = 1 point.
+ * Computes a confidence score based on maximum observed matches capped mathematically.
  */
-const checkCategoryByKeywords = (translatedText) => {
-    let bestCategory = 'Other';
-    let maxMatches = 0;
+const computeWeightedConfidence = (translatedText) => {
+    let bestCategory = null; // No default 'Other'
+    let maxScore = 0;
     const lowerText = translatedText.toLowerCase();
 
-    for (const [category, keywords] of Object.entries(STRICT_CATEGORY_KEYWORDS)) {
+    for (const [category, dict] of Object.entries(CATEGORY_DICTIONARY)) {
         let score = 0;
-        for (const kw of keywords) {
-            if (lowerText.includes(kw.toLowerCase())) {
-                score++;
+        
+        // Check phrases (+3 heavily weighted)
+        for (const phrase of dict.phrases) {
+            if (lowerText.includes(phrase.toLowerCase())) {
+                score += 3;
             }
         }
-        if (score > maxMatches) {
-            maxMatches = score;
+        
+        // Check keywords (+1 normal weight)
+        for (const kw of dict.keywords) {
+            if (lowerText.includes(kw.toLowerCase())) {
+                score += 1;
+            }
+        }
+
+        if (score > maxScore) {
+            maxScore = score;
             bestCategory = category;
         }
     }
     
-    // Require at least 1 keyword match for confidence
-    if (maxMatches >= 1) {
-        return { category: bestCategory, confidence: 0.95 }; // High confidence if directly mapped
+    if (maxScore > 0) {
+        // Assume maximum realistic target score is around ~5 points.
+        // Cap confidence at 1.0 (100%).
+        const calculatedConfidence = Math.min((maxScore / 5.0), 1.0);
+        return { category: bestCategory, confidence: calculatedConfidence };
     } else {
-        return { category: 'Other', confidence: 0.0 }; // Force AI fallback logic later
+        return { category: null, confidence: 0.0 }; // Force AI fallback
     }
 };
 
-// Smart strict department lookup
+// Smart strict department lookup (Other completely eradicated)
 const findStrictDepartment = async (Department, category) => {
     console.log(`[Router] Attempting to find department for category: "${category}"`);
     let dept = await Department.findOne({ departmentName: new RegExp(`^${category}$`, 'i') });
     
     if (!dept) {
-        console.log(`[Router] Strict match failed. Falling back to "Other".`);
-        dept = await Department.findOne({ departmentName: new RegExp(`^Other$`, 'i') });
-    }
-    
-    if (!dept) {
-        console.log(`[Router] RegEx "Other" failed. Trying explicit exact match.`);
-        dept = await Department.findOne({ departmentName: 'Other' });
+        console.log(`[Router] Critical Regex failure for ${category}. Exact match attempt.`);
+        dept = await Department.findOne({ departmentName: category });
     }
 
     if (!dept) {
-        console.log(`[Router] Explicit match failed. Finding ANY department as safety net.`);
+        console.log(`[Router] Found 0 mappings. Finding ANY department as absolute safety net.`);
         dept = await Department.findOne(); // Grab whatever is available to prevent system crash
         if (dept) console.log(`[Router] Safety Net kicked in. Selected: ${dept.departmentName}`);
     }
@@ -421,21 +447,23 @@ Return exactly valid JSON: { "translatedTitle": "string", "translatedDescription
             }
         }
 
-        // STEP 2: ROUTING LAYER (Confidence-Based Keyword Matching on translated text)
+        // STEP 2: ROUTING LAYER (Weighted Confidence Matching on translated text)
         const combinedEnglishText = `${finalTranslatedTitle} ${finalTranslatedDescription}`;
-        let keywordResult = checkCategoryByKeywords(combinedEnglishText);
+        let keywordResult = computeWeightedConfidence(combinedEnglishText);
         
         finalCategory = keywordResult.category;
         routingConfidence = keywordResult.confidence;
+        let isMisclassified = false;
 
-        // Backup AI Classification if confidence < 0.8
-        if (routingConfidence < 0.80 && hasAI) {
+        // Backup AI Classification if confidence < 0.6
+        if (routingConfidence < 0.60 && hasAI) {
             try {
-                const aiCPrompt = `You are an expert grievance classifier.
-1. Strictly classify this complaint into exactly ONE of the following: Electricity, Water, Road, Sanitation, Drainage, Garbage, Other.
-2. Provide a confidence score between 0.0 and 1.0.
-3. Determine Priority: Low, Medium, High, Emergency.
-If the text makes no sense, or is a test string, classify as 'Other' with 0.0 confidence.
+                isMisclassified = true; // Indicates algorithm failed and requested AI adjustment
+                const aiCPrompt = `You are a strict grievance classifier.
+1. Strictly classify this complaint into exactly ONE of the following: Electricity, Water, PWD, Sanitation, Drainage, Garbage.
+2. NEVER classify as 'Other' under any circumstance. Find the best possible fit.
+3. Provide a confidence score between 0.0 and 1.0.
+4. Determine Priority: Low, Medium, High, Emergency.
 Return ONLY valid JSON: { "category": "category string", "confidence": number, "priority": "priority string" }`;
 
                 const aiC = await axios.post('https://api.openai.com/v1/chat/completions', {
@@ -449,21 +477,22 @@ Return ONLY valid JSON: { "category": "category string", "confidence": number, "
                 }, { headers: { 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}` }, timeout: 8000 });
 
                 const pc = JSON.parse(aiC.data.choices[0].message.content);
-                // Validation of returned category
-                if (STRICT_CATEGORY_KEYWORDS[pc.category] || pc.category === 'Other') {
+                // Validation of returned category ONLY accepting the requested 6
+                if (CATEGORY_DICTIONARY[pc.category]) {
                     finalCategory = pc.category;
                     routingConfidence = parseFloat(pc.confidence) || 0;
                     if (pc.priority) priority = pc.priority;
+                } else if (!finalCategory) {
+                    finalCategory = 'Sanitation'; // Absolute final hardcode fallback if AI disobeys
                 }
             } catch (e) {
                 console.error("[Classification Backup] Failed.", e.message);
+                if (!finalCategory) finalCategory = 'Sanitation';
             }
         }
-
-        // Final Confidence Gate
-        if (routingConfidence < 0.80) {
-            finalCategory = 'Other';
-        }
+        
+        // Zero "Other" tolerance safety net
+        if (!finalCategory) finalCategory = 'Sanitation';
 
         // Department Resolution
         const department = await findStrictDepartment(Department, finalCategory);
@@ -484,6 +513,7 @@ Return ONLY valid JSON: { "category": "category string", "confidence": number, "
             translatedText: combinedEnglishText,
             language: language,
             confidence: routingConfidence,
+            isMisclassified,
             category: finalCategory,
             departmentId,
             priorityLevel: priority,

@@ -1,15 +1,44 @@
-require('dotenv').config();
+require('dotenv').config({ path: './.env' });
 const mongoose = require('mongoose');
 const Department = require('./models/Department');
 
-const STRICT_DEPARTMENTS = [
-    { departmentName: 'Electricity', description: 'Power and electrical issues' },
-    { departmentName: 'Water', description: 'Water supply and pipe leakages' },
-    { departmentName: 'Road', description: 'Potholes and road damages' },
-    { departmentName: 'Sanitation', description: 'Cleaning and hygiene' },
-    { departmentName: 'Drainage', description: 'Sewer and blockage issues' },
-    { departmentName: 'Garbage', description: 'Trash and waste management' },
-    { departmentName: 'Other', description: 'Unclassified grievances' }
+const strictDepartments = [
+    {
+        departmentName: 'Electricity',
+        description: 'Power supply and street lighting',
+        slaHours: 48,
+        contactOfficer: 'Nodal Officer'
+    },
+    {
+        departmentName: 'Water',
+        description: 'Water supply and pipe leakages',
+        slaHours: 48,
+        contactOfficer: 'Nodal Officer'
+    },
+    {
+        departmentName: 'PWD',
+        description: 'Public Works Department - Roads, bridges, potholes',
+        slaHours: 48,
+        contactOfficer: 'Nodal Officer'
+    },
+    {
+        departmentName: 'Sanitation',
+        description: 'Cleaning and hygiene',
+        slaHours: 48,
+        contactOfficer: 'Nodal Officer'
+    },
+    {
+        departmentName: 'Drainage',
+        description: 'Sewer and blockage issues',
+        slaHours: 48,
+        contactOfficer: 'Nodal Officer'
+    },
+    {
+        departmentName: 'Garbage',
+        description: 'Trash and waste management',
+        slaHours: 48,
+        contactOfficer: 'Nodal Officer'
+    }
 ];
 
 async function seed() {
@@ -18,19 +47,19 @@ async function seed() {
         await mongoose.connect(process.env.MONGODB_URI);
         console.log('Connected to MongoDB');
 
-        for (const dep of STRICT_DEPARTMENTS) {
-            const exists = await Department.findOne({ departmentName: new RegExp(`^${dep.departmentName}$`, 'i') });
-            if (!exists) {
-                const newDep = new Department(dep);
-                await newDep.save();
-                console.log(`Created new department: ${dep.departmentName}`);
+        for (const deptData of strictDepartments) {
+            let dept = await Department.findOne({ departmentName: deptData.departmentName });
+            if (!dept) {
+                await new Department(deptData).save();
+                console.log(`Created new department: ${deptData.departmentName}`);
             } else {
-                console.log(`Department already exists: ${dep.departmentName}`);
+                console.log(`Department already exists: ${deptData.departmentName}`);
             }
         }
-        console.log('Seeding completed successfully.');
+        
+        console.log('Strict Seeding completed successfully.');
     } catch (err) {
-        console.error('Error during seeding:', err);
+        console.error('Error seeding departments:', err);
     } finally {
         await mongoose.disconnect();
         console.log('Disconnected from MongoDB.');
