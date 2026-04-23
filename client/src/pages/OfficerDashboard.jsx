@@ -150,8 +150,8 @@ const OfficerDashboard = () => {
     };
 
     const handleDirectResolve = async () => {
-        if (!directResolveInput.resolutionNote) {
-            setFetchError('Resolution note is required.');
+        if (!directResolveInput.resolutionNote || !directResolveInput.proofImage) {
+            setFetchError('Resolution note and proof image are required for instant closure.');
             return;
         }
         try {

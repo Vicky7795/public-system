@@ -95,11 +95,30 @@ const AdminDashboard = () => {
 
         socket.on('new_complaint', (newComplaint) => {
             setComplaints(prev => [newComplaint, ...prev]);
+            // Update stats instantly
+            setStats(prev => ({
+                ...prev,
+                total: prev.total + 1,
+                pending: prev.pending + 1
+            }));
             addToast(`New complaint filed: #${newComplaint.ticketId}`, 'info');
         });
 
         socket.on('status_update', (updatedComplaint) => {
-            setComplaints(prev => prev.map(c => c._id === updatedComplaint._id ? updatedComplaint : c));
+            setComplaints(prev => {
+                const old = prev.find(c => c._id === updatedComplaint._id);
+                const newList = prev.map(c => c._id === updatedComplaint._id ? updatedComplaint : c);
+                
+                // If status changed to RESOLVED, update counters
+                if (old && old.status !== 'RESOLVED' && updatedComplaint.status === 'RESOLVED') {
+                    setStats(s => ({
+                        ...s,
+                        pending: Math.max(0, s.pending - 1),
+                        resolved: s.resolved + 1
+                    }));
+                }
+                return newList;
+            });
             addToast(`Complaint #${updatedComplaint.ticketId} status updated to ${updatedComplaint.status}`, 'success');
         });
 

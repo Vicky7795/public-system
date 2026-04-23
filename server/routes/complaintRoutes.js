@@ -664,6 +664,7 @@ router.post('/', auth, async (req, res) => {
                     finalTranslatedTitle = result.core_issue || result.translated_text.substring(0, 50) + "...";
                     const deptCode = result.department;
                     finalCategory = DEPARTMENT_CODE_MAPPING[deptCode] || 'General Department';
+                    priority = result.priority_level || 'Medium';
                     routingConfidence = 1.0;
                     finalDecisionReason = `AI Classification (${deptCode})`;
                     aiResultCategory = deptCode;
