@@ -25,8 +25,8 @@ router.get('/', async (req, res) => {
         const departments = await Department.find();
         const depsWithStats = await Promise.all(departments.map(async (dep) => {
             const total = await Complaint.countDocuments({ departmentId: dep._id });
-            const pending = await Complaint.countDocuments({ departmentId: dep._id, status: { $in: ['Pending', 'Assigned', 'In Progress'] } });
-            const resolved = await Complaint.countDocuments({ departmentId: dep._id, status: 'Resolved' });
+            const pending = await Complaint.countDocuments({ departmentId: dep._id, status: { $in: ['NEW', 'ASSIGNED', 'IN_PROGRESS', 'REOPENED', 'OVERDUE', 'ESCALATED'] } });
+            const resolved = await Complaint.countDocuments({ departmentId: dep._id, status: 'RESOLVED' });
 
             // Basic SLA performance calculation
             return {
@@ -43,10 +43,34 @@ router.get('/', async (req, res) => {
     }
 });
 
+// Get Single Department
+router.get('/:id', async (req, res) => {
+    const rawId = req.params.id;
+    try {
+        const cleanId = rawId.split(':')[0].trim();
+        console.log(`[GET] Department Request - Raw: "${rawId}", Clean: "${cleanId}"`);
+        
+        const department = await Department.findById(cleanId);
+        if (!department) {
+            console.warn(`[GET] Department NOT FOUND: ${cleanId}`);
+            return res.status(404).json({ message: 'Department not found' });
+        }
+        res.json(department);
+    } catch (err) {
+        console.error(`[GET] Department Error:`, err.message);
+        res.status(400).json({ 
+            message: 'Invalid ID or Processing Error', 
+            receivedId: rawId,
+            error: err.message 
+        });
+    }
+});
+
 // Edit Department
 router.patch('/:id', adminAuth, async (req, res) => {
     try {
-        const department = await Department.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        const cleanId = req.params.id.split(':')[0].trim();
+        const department = await Department.findByIdAndUpdate(cleanId, req.body, { new: true });
         res.json(department);
     } catch (err) {
         res.status(500).json({ message: err.message });
@@ -56,7 +80,7 @@ router.patch('/:id', adminAuth, async (req, res) => {
 // Delete Department
 router.delete('/:id', adminAuth, async (req, res) => {
     try {
-        const depId = req.params.id;
+        const depId = req.params.id.split(':')[0].trim();
         
         // 1. Check for active complaints in this department
         const complaintCount = await Complaint.countDocuments({ departmentId: depId });

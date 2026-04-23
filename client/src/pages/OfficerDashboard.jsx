@@ -11,6 +11,7 @@ import {
 import BackButton from '../components/BackButton';
 import SummaryCard from '../components/SummaryCard';
 import NotificationCenter from '../components/NotificationCenter';
+import socket from '../utils/socket';
 
 const OfficerDashboard = () => {
     const [view, setView] = useState('mine'); // 'mine' or 'pool'
@@ -56,9 +57,9 @@ const OfficerDashboard = () => {
             const now = new Date();
             setStats({
                 total: mineRes.data.length,
-                overdue: mineRes.data.filter(c => c.status !== 'Resolved' && new Date(c.slaDeadline) < now).length,
-                inProgress: mineRes.data.filter(c => c.status === 'In Progress').length,
-                resolved: mineRes.data.filter(c => c.status === 'Resolved').length,
+                overdue: mineRes.data.filter(c => !['RESOLVED'].includes(c.status) && new Date(c.slaDeadline) < now).length,
+                inProgress: mineRes.data.filter(c => ['NEW', 'ASSIGNED', 'IN_PROGRESS', 'ESCALATED'].includes(c.status)).length,
+                resolved: mineRes.data.filter(c => ['RESOLVED'].includes(c.status)).length,
                 poolCount: poolRes.data.length
             });
         } catch (err) {
@@ -70,9 +71,44 @@ const OfficerDashboard = () => {
 
     useEffect(() => {
         fetchData();
-        const interval = setInterval(fetchData, 10000); // Fast 10s polling for escalations
+        // We still keep a slow 60s fallback poll just in case of socket drops
+        const interval = setInterval(fetchData, 60000); 
         return () => clearInterval(interval);
     }, []);
+
+    // Socket.io for real-time updates
+    useEffect(() => {
+        if (!user?.departmentId) return;
+        
+        socket.connect();
+        
+        const deptId = typeof user.departmentId === 'object' ? user.departmentId._id : user.departmentId;
+        socket.emit('join_department', deptId);
+
+        socket.on('new_complaint_pool', (newComplaint) => {
+            setPool(prev => [newComplaint, ...prev]);
+            setStats(s => ({ ...s, poolCount: s.poolCount + 1 }));
+        });
+
+        socket.on('status_update', (updatedComplaint) => {
+            // Update in mine
+            setComplaints(prev => prev.map(c => c._id === updatedComplaint._id ? updatedComplaint : c));
+            // Update in pool (if it was moved back or something)
+            setPool(prev => prev.map(c => c._id === updatedComplaint._id ? updatedComplaint : c));
+            
+            // Recalculate stats briefly (or just refresh if complex)
+            if (updatedComplaint.assignedOfficerId === user._id || updatedComplaint.assignedOfficerId?._id === user._id) {
+                // It's mine, might need a refresh of stats
+                fetchData();
+            }
+        });
+
+        return () => {
+            socket.off('new_complaint_pool');
+            socket.off('status_update');
+            socket.disconnect();
+        };
+    }, [user?.departmentId]);
 
     useEffect(() => {
         const handler = setTimeout(() => setDebouncedSearch(searchTerm), 300);
@@ -261,7 +297,7 @@ const OfficerDashboard = () => {
                                     <div className="col-span-2 mb-4 lg:mb-0">
                                         <div className="flex flex-col gap-2">
                                             <span className="font-mono text-[11px] font-black text-[#1D4ED8] bg-blue-50 px-2 py-0.5 rounded w-fit border border-blue-100">#{c.ticketId}</span>
-                                            {c.status === 'Escalated' && (
+                                            {c.status === 'ESCALATED' && (
                                                 <span className="text-[10px] font-black px-2 py-0.5 rounded w-fit uppercase tracking-tighter bg-red-600 text-white animate-pulse shadow-[0_0_8px_rgba(220,38,38,0.6)]">
                                                     Escalated
                                                 </span>
@@ -312,24 +348,27 @@ const OfficerDashboard = () => {
                                             </>
                                         ) : (
                                             <>
-                                                {(c.status === 'Pending' || c.status === 'Reopened') && (
+                                                {(c.status === 'NEW' || c.status === 'REOPENED') && (
                                                     <button onClick={() => handleAccept(c._id)} className="w-full py-2.5 bg-[#1D4ED8] text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-[#1e40af] transition-all">Start Operation</button>
                                                 )}
-                                                {(c.status === 'In Progress' || c.status === 'Assigned' || c.status === 'Escalated') && (
+                                                {(c.status === 'IN_PROGRESS' || c.status === 'ASSIGNED' || c.status === 'ESCALATED') && (
                                                     <>
                                                         <div className="flex items-center justify-between mb-1 px-1">
                                                             <span className="text-[10px] font-bold text-gray-400 uppercase">{c.progress || 0}%</span>
-                                                            <div className="w-16 h-1 bg-gray-100 rounded-full overflow-hidden">
-                                                                <div className="h-full bg-govBlue" style={{ width: `${c.progress || 0}%` }} />
-                                                            </div>
+                                                            <span className={`text-[10px] font-bold uppercase tracking-tight ${c.status === 'IN_PROGRESS' ? 'text-orange-600' : 'text-gray-500'}`}>
+                                                                {c.status}
+                                                            </span>
+                                                        </div>
+                                                        <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden mb-3">
+                                                            <div className="h-full bg-[#1D4ED8] transition-all duration-500" style={{ width: `${c.progress || 0}%` }} />
                                                         </div>
                                                         <button onClick={() => { setSelectedId(c._id); setModal('progress'); setProgressInput({ progress: c.progress || 0, note: '' }) }}
-                                                            className="w-full py-2 border border-gray-200 text-gray-600 bg-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-gray-50 transition-all">Log progress</button>
+                                                            className="w-full py-2 border border-gray-200 text-gray-600 bg-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-gray-50 transition-all mb-2">Log progress</button>
                                                         <button onClick={() => { setSelectedId(c._id); setModal('resolve'); }}
                                                             className="w-full py-2 bg-green-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-green-700 transition-all shadow-sm">Seal & Close</button>
                                                     </>
                                                 )}
-                                                {c.status === 'Resolved' && (
+                                                {c.status === 'RESOLVED' && (
                                                     <div className="w-full py-2.5 bg-green-50 text-green-700 rounded-lg text-[10px] font-black uppercase tracking-widest text-center border border-green-100">Closed ✓</div>
                                                 )}
                                             </>
@@ -467,7 +506,7 @@ const OfficerDashboard = () => {
                                             >
                                                 Authorise Operations on This Case
                                             </button>
-                                        ) : selectedComplaint.status === 'In Progress' ? (
+                                        ) : selectedComplaint.status === 'IN_PROGRESS' ? (
                                             <div className="flex gap-3">
                                                 <button onClick={() => setModal('progress')} className="flex-1 py-4 bg-white border-2 border-slate-100 text-slate-700 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-slate-50 transition-all">Update Log</button>
                                                 <button onClick={() => setModal('resolve')} className="flex-2 py-4 bg-green-600 text-white rounded-xl font-black text-xs uppercase tracking-widest hover:bg-green-700 transition-all shadow-lg shadow-green-100">Certify Resolution</button>

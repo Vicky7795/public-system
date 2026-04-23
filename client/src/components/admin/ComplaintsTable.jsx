@@ -4,10 +4,11 @@ import { Activity, AlertTriangle, AlertCircle, FileText, Users } from 'lucide-re
 const ComplaintsTable = ({ complaints, allOfficers, onAction, setCommandModal, setCommandInput }) => {
     const getStatusStyles = (status) => {
         switch (status) {
-            case 'Resolved': return 'text-green-600 bg-green-50 border-green-100';
-            case 'Overdue': return 'text-red-600 bg-red-50 border-red-100 animate-pulse';
-            case 'Escalated': return 'text-white bg-red-600 border-red-700 font-black shadow-lg shadow-red-100';
-            case 'In Progress': return 'text-orange-600 bg-orange-50 border-orange-100';
+            case 'RESOLVED': return 'text-green-600 bg-green-50 border-green-100';
+            case 'OVERDUE': return 'text-red-600 bg-red-50 border-red-100 animate-pulse';
+            case 'ESCALATED': return 'text-white bg-red-600 border-red-700 font-black shadow-lg shadow-red-100';
+            case 'IN_PROGRESS': return 'text-orange-600 bg-orange-50 border-orange-100';
+            case 'ASSIGNED': return 'text-blue-600 bg-blue-50 border-blue-200';
             default: return 'text-slate-500 bg-slate-50 border-slate-100';
         }
     };
@@ -42,7 +43,7 @@ const ComplaintsTable = ({ complaints, allOfficers, onAction, setCommandModal, s
                                         <div className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md border text-[9px] font-black uppercase tracking-widest ${getStatusStyles(c.status)}`}>
                                             <Activity size={10} /> {c.status}
                                         </div>
-                                        {c.status !== 'Resolved' && (
+                                        {c.status !== 'RESOLVED' && (
                                             <span className="text-[8px] text-gray-400 font-bold italic">SLA: {new Date(c.slaDeadline).toLocaleDateString()}</span>
                                         )}
                                     </div>

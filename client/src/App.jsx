@@ -10,7 +10,10 @@ import AdminDashboard from './pages/AdminDashboard';
 import OfficerDashboard from './pages/OfficerDashboard';
 import SubmitComplaint from './pages/SubmitComplaint';
 import TrackTicket from './pages/TrackTicket';
+import { GoogleOAuthProvider } from '@react-oauth/google';
 import Navbar from './components/Navbar';
+
+const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
 function AppContent() {
   const location = useLocation();
@@ -49,11 +52,17 @@ function AppContent() {
 }
 
 function App() {
-  return (
+  const content = (
     <Router>
       <AppContent />
     </Router>
   );
+
+  return clientId ? (
+    <GoogleOAuthProvider clientId={clientId}>
+      {content}
+    </GoogleOAuthProvider>
+  ) : content;
 }
 
 export default App;

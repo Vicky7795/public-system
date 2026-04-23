@@ -5,18 +5,26 @@ const complaintSchema = new mongoose.Schema({
     ticketId: { type: String, unique: true, index: true }, // Short 6-char ID e.g. C6CC2F
     title: { type: String, required: true },
     description: { type: String, required: true },
-    category: { type: String }, // AI predicted category
+    categoryId: { type: String }, // NEW: ID-based category
+    category: { type: String }, // AI predicted or Display category name
     departmentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Department' },
     priority: { type: String }, // Legacy field
     priorityLevel: { type: String, enum: ['Low', 'Medium', 'High'], default: 'Low' },
-    status: { type: String, enum: ['Pending', 'Assigned', 'In Progress', 'Resolved', 'Reopened', 'Overdue', 'Escalated'], default: 'Pending' },
+    status: { type: String, enum: ['NEW', 'ASSIGNED', 'IN_PROGRESS', 'RESOLVED', 'REOPENED', 'OVERDUE', 'ESCALATED'], default: 'NEW' },
     imageData: { type: String },
     // Multilingual AI Fields
     originalText: { type: String }, // Raw description in native language
     translatedText: { type: String }, // English translation
     language: { type: String, default: 'en' }, // Code of selected language (en, hi, ta)
+    detectedLanguage: { type: String }, // Language detected by AI
     confidence: { type: Number, min: 0, max: 1 }, // Added for automatic routing threshold
     isMisclassified: { type: Boolean, default: false }, // AI categorization fallback tracking
+    
+    // Logic Tracking
+    aiResultCategory: { type: String }, // Raw category returned by AI
+    keywordScore: { type: Number }, // Total score from keyword scanning
+    finalDecisionReason: { type: String }, // Explanation: "Strong Keyword Match" or "AI Fallback"
+    matchedKeywords: [{ type: String }], // List of words/phrases that triggered routing
     
     location: {
         lat: { type: Number },

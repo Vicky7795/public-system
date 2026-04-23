@@ -8,38 +8,55 @@ const assignmentService = {
      */
     assignToOfficer: async (complaint, departmentId) => {
         try {
-            // Find officers in this department, sorted by active cases
-            const officer = await User.findOne({
+            console.log(`[ASSIGNMENT] Initiating for Complaint ID: ${complaint._id}, Dept: ${departmentId}`);
+            
+            // 1. Find best officer in this department (Least-Load)
+            let officer = await User.findOne({
                 role: 'Officer',
-                departmentId: departmentId
+                departmentId: departmentId,
+                status: 'Active'
             }).sort({ activeCasesCount: 1 });
 
+            let assignmentReason = "Least-Load Officer Match";
+
+            // 2. Admin Fallback - Ensure assignedTo != null
             if (!officer) {
-                console.log(`[ASSIGNMENT] No officers found for department ${departmentId}`);
+                console.log(`[ASSIGNMENT] NO ACTIVE OFFICERS found for department. Cascading to Admin...`);
+                officer = await User.findOne({ role: 'Admin' });
+                assignmentReason = "No Available Dept Officer - Admin Fallback";
+            }
+
+            if (!officer) {
+                console.error(`[CRITICAL] No fallback Admin found in database. Assignment Failure.`);
                 return null;
             }
 
-            // Update complaint
+            // 3. Update & Commit Assignment
             complaint.assignedOfficerId = officer._id;
-            complaint.status = 'Assigned';
+            complaint.status = 'ASSIGNED'; // User requested strict ASSIGNED naming
             await complaint.save();
 
-            // Update officer stats
+            // 4. Update stats for the assigned individual
             await User.findByIdAndUpdate(officer._id, { $inc: { activeCasesCount: 1 } });
 
-            // Notify officer
+            // 5. Trigger Notifications
             await notificationService.send({
                 recipientId: officer._id,
                 type: 'NEW_ASSIGNMENT',
-                message: `New Grievance assigned: #${complaint.ticketId}. Please review immediately.`,
+                message: `URGENT Assignment: #${complaint.ticketId} - Status UPDATED TO ASSIGNED.`,
                 complaintId: complaint._id,
-                priority: 'MEDIUM'
+                priority: 'HIGH'
             });
 
-            console.log(`[ASSIGNMENT] Case #${complaint.ticketId} assigned to Officer ${officer.name}`);
+            console.log(`[ASSIGNMENT SUCCESS] ID: ${complaint._id}, Ticket: ${complaint.ticketId}`);
+            console.log(`[DEBUG LOG] Complaint Dept ID: ${departmentId}`);
+            console.log(`[DEBUG LOG] Officer Dept ID: ${officer.departmentId}`);
+            console.log(`[DEBUG LOG] AssignedTo: ${officer.name} (${officer._id})`);
+            console.log(`[DEBUG LOG] AssignmentReason: ${assignmentReason}`);
+            
             return officer._id;
         } catch (error) {
-            console.error('Assignment Service Error:', error);
+            console.error('[ASSIGNMENT ERROR] Fatal failure during flow:', error);
             return null;
         }
     }

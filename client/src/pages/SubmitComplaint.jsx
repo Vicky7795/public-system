@@ -15,6 +15,8 @@ const SubmitComplaint = () => {
     const [location, setLocation] = useState(null);
     const [loading, setLoading] = useState(false);
     const [successData, setSuccessData] = useState(null);
+    const [categories, setCategories] = useState([]);
+    const [selectedCategory, setSelectedCategory] = useState('');
     const [error, setError] = useState('');
     const fileInputRef = useRef(null);
     const navigate = useNavigate();
@@ -22,7 +24,17 @@ const SubmitComplaint = () => {
     useEffect(() => {
         const token = localStorage.getItem('token');
         if (!token) navigate('/citizen/login', { replace: true });
-    }, [navigate]);
+        
+        const fetchCategories = async () => {
+            try {
+                const res = await api.get(`/categories?lang=${i18n.language || 'en'}`);
+                setCategories(res.data);
+            } catch (err) {
+                console.error('Failed to fetch categories:', err);
+            }
+        };
+        fetchCategories();
+    }, [navigate, i18n.language]);
 
     /* ── Image helpers ─────────────────────────────────────── */
     const handleImageChange = (e) => {
@@ -65,6 +77,7 @@ const SubmitComplaint = () => {
         try {
             const { data } = await api.post('/complaints', {
                 ...formData,
+                categoryId: selectedCategory || null,
                 imageData: imageData || null,
                 language: i18n.language || 'en',
                 location: {
@@ -144,6 +157,21 @@ const SubmitComplaint = () => {
                                 className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-govBlue focus:ring-4 focus:ring-blue-50 outline-none transition-all font-medium text-slate-800"
                                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                             />
+                        </div>
+
+                        <div>
+                            <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">{t('submit.success.category_label')}</label>
+                            <select
+                                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-govBlue focus:ring-4 focus:ring-blue-50 outline-none transition-all font-medium text-slate-800"
+                                value={selectedCategory}
+                                onChange={(e) => setSelectedCategory(e.target.value)}
+                            >
+                                <option value="">{t('submit.select_category_placeholder', 'Select a Category (Optional)')}</option>
+                                {categories.map(cat => (
+                                    <option key={cat.categoryId} value={cat.categoryId}>{cat.name}</option>
+                                ))}
+                            </select>
+                            <p className="text-[10px] text-slate-400 mt-2 font-bold italic">💡 {t('submit.category_hint', 'Choosing a category ensures faster routing.')}</p>
                         </div>
 
                         <div>

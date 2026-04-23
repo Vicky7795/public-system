@@ -126,8 +126,8 @@ const CitizenDashboard = () => {
                 {/* Summary Metrics */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-10">
                     <SummaryCard label={t('dashboard.metrics.total')} value={complaints.length} color="blue" icon={<ClipboardList size={24} />} />
-                    <SummaryCard label={t('dashboard.metrics.in_progress')} value={complaints.filter(c => c.status === 'In Progress').length} color="orange" icon={<Calendar size={24} />} />
-                    <SummaryCard label={t('dashboard.metrics.resolved')} value={complaints.filter(c => c.status === 'Resolved').length} color="green" icon={<CheckCircle2 size={24} />} />
+                    <SummaryCard label={t('dashboard.metrics.in_progress')} value={complaints.filter(c => ['NEW', 'ASSIGNED', 'IN_PROGRESS', 'REOPENED', 'OVERDUE', 'ESCALATED'].includes(c.status)).length} color="orange" icon={<Calendar size={24} />} />
+                    <SummaryCard label={t('dashboard.metrics.resolved')} value={complaints.filter(c => c.status === 'RESOLVED').length} color="green" icon={<CheckCircle2 size={24} />} />
                 </div>
 
                 {/* Filters Row */}
@@ -157,9 +157,9 @@ const CitizenDashboard = () => {
                             onChange={(e) => setStatusFilter(e.target.value)}
                         >
                             <option value="All">{t('dashboard.filters.all_statuses')}</option>
-                            <option value="Pending">{t('status.pending')}</option>
-                            <option value="In Progress">{t('status.in_progress')}</option>
-                            <option value="Resolved">{t('status.resolved')}</option>
+                            <option value="NEW">{t('status.pending')}</option>
+                            <option value="IN_PROGRESS">{t('status.in_progress')}</option>
+                            <option value="RESOLVED">{t('status.resolved')}</option>
                         </select>
                         <select 
                             className="px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:bg-white outline-none font-medium text-gray-700"
@@ -215,12 +215,12 @@ const CitizenDashboard = () => {
 
                                     {/* Status */}
                                     <div className="col-span-2 mb-6 lg:mb-0">
-                                        <span className={`inline-flex items-center gap-1.5 text-[11px] font-bold
-                                            ${c.status === 'Resolved' ? 'text-green-600' : c.status === 'In Progress' ? 'text-orange-600' : 'text-gray-500'}`}>
-                                            <div className={`w-1.5 h-1.5 rounded-full ${c.status === 'Resolved' ? 'bg-green-600' : c.status === 'In Progress' ? 'bg-orange-600' : 'bg-gray-400'}`} />
-                                            {c.status}
-                                        </span>
-                                    </div>
+                                         <span className={`inline-flex items-center gap-1.5 text-[11px] font-bold
+                                             ${c.status === 'RESOLVED' ? 'text-green-600' : (c.status === 'IN_PROGRESS' || c.status === 'ASSIGNED') ? 'text-orange-600' : 'text-gray-500'}`}>
+                                             <div className={`w-1.5 h-1.5 rounded-full ${c.status === 'RESOLVED' ? 'bg-green-600' : (c.status === 'IN_PROGRESS' || c.status === 'ASSIGNED') ? 'bg-orange-600' : 'bg-gray-400'}`} />
+                                             {c.status}
+                                         </span>
+                                     </div>
 
                                     {/* Actions */}
                                     <div className="col-span-2 flex justify-end">

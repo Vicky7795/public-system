@@ -10,8 +10,8 @@ import api from '../utils/api';
 
 /* ─── Fix Leaflet default icon in Vite ──────────────────────────────── */
 const markerIcon = L.icon({
-    iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-    shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+    iconUrl: '/leaflet/images/marker-icon.png',
+    shadowUrl: '/leaflet/images/marker-shadow.png',
     iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34],
 });
 L.Marker.prototype.options.icon = markerIcon;

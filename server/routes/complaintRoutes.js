@@ -9,6 +9,175 @@ const notificationService = require('../services/notificationService');
 const User = require('../models/User');
 const Department = require('../models/Department');
 const { auth, adminAuth } = require('../middleware/auth');
+const socketService = require('../services/socketService');
+
+const CLASSIFICATION_SYSTEM_PROMPT = `You are a STRICT, PRODUCTION-GRADE complaint routing AI.
+
+Your job is CRITICAL:
+➡️ ALWAYS assign the complaint to a VALID department
+➡️ NEVER return "unassigned", "unknown", or wrong department
+➡️ Work correctly for ALL languages
+
+========================================
+🌍 MULTI-LANGUAGE (MANDATORY FIX)
+
+The complaint can be in ANY language.
+
+You MUST DO THIS FIRST:
+
+1. Detect the language
+2. Translate the complaint into CLEAR ENGLISH
+3. Understand the meaning
+
+⚠️ This step is COMPULSORY
+⚠️ Do NOT skip translation under any condition
+
+If translation is unclear → try your BEST to interpret meaning
+❌ NEVER fail or skip
+
+========================================
+🧠 UNDERSTANDING RULE (VERY IMPORTANT)
+
+* Focus on MEANING, not exact words
+* Handle:
+
+  * spelling mistakes
+  * local language
+  * mixed language
+
+Example:
+"ಬೀದಿ ದೀಪ ಹಾನಿಯಾಗಿದೆ"
+→ Street light is damaged
+
+========================================
+🏛️ DEPARTMENTS (MUST SELECT ONE)
+
+ELECTRICITY
+WATER
+MUNICIPAL
+HEALTH
+POLICE
+TRANSPORT
+EDUCATION
+
+========================================
+💡 PRIORITY ROUTING RULES
+
+1. ROAD ISSUES: Any issue involving the physical state, cleanliness, or maintenance of ROADS/BRIDGES must go to PWD.
+2. WATER vs MUNICIPAL: Water supply issues go to WATER. Garbage/Toilets go to MUNICIPAL.
+AGRICULTURE
+REVENUE
+FOREST
+SOCIAL_WELFARE
+
+❌ NEVER leave empty
+❌ NEVER return unassigned
+
+========================================
+🔥 STRICT PRIORITY RULES
+
+1. ELECTRICITY (TOP PRIORITY)
+
+If complaint is about:
+
+* street light
+* light not working
+* power issue
+* electricity problem
+
+MULTI-LANGUAGE:
+
+* Marathi: पथदिवे, वीज
+* Hindi: बिजली, लाइट
+* Kannada: ಬೀದಿ ದೀಪ, ವಿದ್ಯುತ್
+* Tamil: தெரு விளக்கு
+* Telugu: వీధి దీపాలు
+
+👉 ALWAYS RETURN: ELECTRICITY
+❌ NEVER choose MUNICIPAL
+
+---
+
+2. WATER
+
+* no water
+* leakage
+* pipeline
+
+👉 RETURN: WATER
+
+---
+
+3. MUNICIPAL
+
+* garbage
+* waste
+* drainage
+* road problem (only if no light issue)
+
+👉 RETURN: MUNICIPAL
+
+---
+
+Other:
+
+* POLICE → crime
+* HEALTH → hospital
+* TRANSPORT → traffic
+* EDUCATION → school
+* AGRICULTURE → farming
+* REVENUE → land
+* FOREST → trees
+* SOCIAL_WELFARE → schemes
+
+========================================
+⚠️ SMART DECISION LOGIC
+
+* "road + light issue" → ELECTRICITY
+* "only road issue" → MUNICIPAL
+* multiple issues → choose MAIN issue
+
+========================================
+🧪 FINAL CHECK (MANDATORY)
+
+Before answering:
+
+* Make sure translation is correct
+* Make sure department is BEST match
+* Make sure NOT unassigned
+
+If unsure → choose closest valid department
+
+========================================
+📦 OUTPUT FORMAT (STRICT JSON)
+
+{
+"detected_language": "",
+"translated_text": "",
+"core_issue": "",
+"department": ""
+}
+
+========================================
+FINAL INSTRUCTION
+
+You MUST return a VALID department for EVERY input.`;
+
+const DEPARTMENT_CODE_MAPPING = {
+    'ELECTRICITY': 'Electricity Department',
+    'WATER': 'Water Department',
+    'MUNICIPAL': 'Municipal Department',
+    'HEALTH': 'Health Department',
+    'AGRICULTURE': 'Agriculture Department',
+    'TRANSPORT': 'Transport Department',
+    'POLICE': 'Police Department',
+    'EDUCATION': 'Education Department',
+    'SOCIAL_WELFARE': 'Social Welfare Department',
+    'REVENUE': 'Revenue Department',
+    'FOREST': 'Forest Department',
+    'PWD': 'PWD',
+    'GENERAL': 'General Department'
+};
 
 // Helper to generate Ticket ID
 const generateTicketId = () => {
@@ -30,11 +199,11 @@ const getSlaDeadline = (priority) => {
 router.get('/public-stats', async (req, res) => {
     try {
         const total = await Complaint.countDocuments();
-        const resolved = await Complaint.countDocuments({ status: 'Resolved' });
+        const resolved = await Complaint.countDocuments({ status: 'RESOLVED' });
 
         // Calculate average response time (from Acceptance to Resolution)
         const resolvedComplaints = await Complaint.find({
-            status: 'Resolved',
+            status: 'RESOLVED',
             acceptedAt: { $exists: true },
             resolvedAt: { $exists: true }
         });
@@ -73,7 +242,6 @@ router.get('/reverse-geocode', async (req, res) => {
     try {
         console.log(`[Geocode Proxy] Resolving address via Nominatim for (${lat}, ${lng})`);
         
-        // Nominatim (OpenStreetMap) - Completely Free
         const geoRes = await axios.get(
             `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=jsonv2&addressdetails=1`,
             { 
@@ -120,18 +288,12 @@ router.get('/reverse-geocode', async (req, res) => {
     }
 });
 
-/**
- * @route   GET /api/complaints/geocode-search
- * @desc    Backend proxy for Nominatim location search (avoids browser CORS block)
- * @query   q - search string
- */
 router.get('/geocode-search', async (req, res) => {
     const { q } = req.query;
     if (!q || q.trim().length < 2) {
         return res.status(400).json({ message: 'Search query too short.' });
     }
 
-    // Validate pincode: must be a valid Indian 6-digit pincode
     const isPincode = /^\d+$/.test(q.trim());
     if (isPincode) {
         const indianPincodeRegex = /^[1-9][0-9]{5}$/;
@@ -141,7 +303,6 @@ router.get('/geocode-search', async (req, res) => {
     }
 
     try {
-        // Always append India to the query and restrict countrycodes to India
         const searchQuery = q.trim().toLowerCase().includes('india') ? q.trim() : `${q.trim()}, India`;
 
         const searchRes = await axios.get(
@@ -154,7 +315,6 @@ router.get('/geocode-search', async (req, res) => {
             }
         );
 
-        // Server-side safety filter: only return results tagged as India
         const indiaOnly = (searchRes.data || []).filter(r => {
             const country = r.address?.country_code || '';
             return country.toLowerCase() === 'in';
@@ -167,10 +327,6 @@ router.get('/geocode-search', async (req, res) => {
     }
 });
 
-/**
- * @route   GET /api/complaints/ip-location
- * @desc    Fallback to IP-based location if GPS is unavailable
- */
 router.get('/ip-location', async (req, res) => {
     try {
         console.log('[Geocode Proxy] Fetching IP-based location fallback...');
@@ -199,100 +355,153 @@ router.get('/ip-location', async (req, res) => {
     }
 });
 
-
-
-
-// Keyword mapping: Deep weighted dictionary for Translate -> Then Route mapping.
+// Keyword mapping: 12 STRICT Departments with Bilingual Support
 const CATEGORY_DICTIONARY = {
-    'Electricity': {
-        phrases: ['street light not working', 'power cut', 'no electricity', 'transformer spark', 'short circuit', 'current lag', 'wire break'],
-        keywords: ['electricity', 'light', 'power', 'current', 'wire', 'shock', 'fuse', 'meter', 'bijli', 'voltage']
+    'Water Department': {
+        phrases: ['pipe burst', 'water leakage', 'no water supply', 'pipeline broken', 'paani nahi', 'pani nahi', 'पाणी येत नाही', 'ನೀರು ಬರುತ್ತಿಲ್ಲ', 'ನೀರ'],
+        strongKeywords: ['pipe', 'leakage', 'leak', 'burst', 'पाईप', 'पाइप', 'गळती', 'फुटली', 'ನೀರು', 'ಪೈಪ್'],
+        keywords: ['tap', 'tank', 'supply', 'overflow', 'jal', 'pani', 'paani', 'पाणी', 'पाण्याची', 'ಜಲ', 'ನೀರ']
     },
-    'Water': {
-        phrases: ['no water', 'pipe broken', 'water leak', 'polluted water', 'drinking water', 'paani nahi'],
-        keywords: ['water', 'pipe', 'leakage', 'supply', 'tap', 'plumb', 'paani', 'jal', 'tanker', 'drain', 'pressure', 'overflow']
+    'Electricity Department': {
+        phrases: ['street light not working', 'power cut', 'transformer spark', 'electric shock', 'current lag', 'light gone', 'लाईट गेलेली आहे', 'दिवा बंद आहे', 'ಬೆಳಕು ಇಲ್ಲ', 'ವಿದ್ಯುತ್ ಇಲ್ಲ'],
+        strongKeywords: ['electricity', 'light', 'current', 'shock', 'bijli', 'बिजली', 'वीज', 'लाईट', 'खांब', 'ವಿದ್ಯುತ್', 'ಬೆಳಕು'],
+        keywords: ['power', 'transformer', 'wire', 'fuse', 'meter', 'pole', 'voltage', 'दिवा', 'लाइट', 'ಕಂಬ', 'ಮೋಟರ್']
     },
     'PWD': {
-        phrases: ['bad road', 'road construction', 'huge pothole', 'broken pavement', 'road damage'],
-        keywords: ['road', 'pothole', 'rasta', 'khadda', 'bridge', 'pavement', 'highway', 'asphalt', 'footpath', 'tar', 'concrete', 'सड़क']
+        phrases: ['bad road', 'pothole issue', 'bridge crack', 'footpath broken', 'सड़क खराब', 'रस्ता खराब', 'ರಸ್ತೆ ಸರಿ ಇಲ್ಲ'],
+        strongKeywords: ['pothole', 'khadda', 'bridge', 'खड्डा', 'ರಸ್ತೆ', 'ಗಡ್ಡೆ'],
+        keywords: ['road', 'rasta', 'pavement', 'highway', 'asphalt', 'concrete', 'सड़क', 'रस्ता', 'ಸೇತುವೆ']
     },
-    'Sanitation': {
-        phrases: ['not cleaned', 'dead animal', 'bad smell', 'public toilet'],
-        keywords: ['sanitation', 'cleaning', 'clean', 'smell', 'mosquito', 'hygiene', 'toilet', 'swachh']
+    'Police': {
+        phrases: ['theft report', 'safety issue', 'noise complaint', 'rowdy behavior', 'ಕಳ್ಳತನ', 'ಚೋರಿ'],
+        strongKeywords: ['police', 'theft', 'crime', 'fir', 'चोरी', 'ಪೊಲೀಸ್'],
+        keywords: ['robbery', 'safety', 'security', 'thana', 'ಠಾಣೆ']
     },
-    'Drainage': {
-        phrases: ['drainage overflowing', 'sewer block', 'gutter overflow', 'water logging'],
-        keywords: ['drainage', 'sewer', 'blockage', 'drain', 'clog', 'gutter']
+    'Health Department': {
+        phrases: ['hospital issue', 'clinic closed', 'medical negligence', 'vaccine delivery', 'ambulance delay', 'ಆಸ್ಪತ್ರೆ'],
+        strongKeywords: ['hospital', 'doctor', 'clinic', 'ದವಾಖಾನೆ'],
+        keywords: ['health', 'medicine', 'vaccine', 'patient', 'disease', 'medical', 'emergency', 'ಔಷಧಿ']
     },
-    'Garbage': {
-        phrases: ['garbage dump', 'trash bin full', 'waste burn', 'kachra truck'],
-        keywords: ['garbage', 'trash', 'dustbin', 'bin', 'dump', 'waste', 'kachra', 'plastic', 'litter']
+    'Municipal': {
+        phrases: ['garbage dump', 'trash bin full', 'not cleaned', 'bad smell', 'sewer overflow', 'kachra truck', 'ಕಸ'],
+        strongKeywords: ['garbage', 'sewer', 'trash', 'kachra', 'ಸ್ವಚ್ಛತೆ'],
+        keywords: ['municipal', 'waste', 'cleaning', 'clean', 'drain', 'clog', 'gutter', 'smell', 'mosquito', 'ಗುಂಡಿ']
+    },
+    'Education Department': {
+        phrases: ['school problem', 'college issue', 'teacher absent', 'scholarship delay', 'ಶಾಲೆ'],
+        strongKeywords: ['school', 'college', 'teacher', 'ಶಿಕ್ಷಕ'],
+        keywords: ['education', 'student', 'scholarship', 'exam', 'admission', 'ಪರೀಕ್ಷೆ']
+    },
+    'Transport Department': {
+        phrases: ['bus delay', 'traffic light', 'license issue', 'permit pending'],
+        strongKeywords: ['transport', 'traffic', 'bus', 'ಬಸ್'],
+        keywords: ['driver', 'license', 'permit', 'auto', 'taxi', 'parking', 'ಚಾಲಕ']
+    },
+    'Agriculture Department': {
+        phrases: ['farmer seed', 'fertilizer issue', 'crop damage', 'irrigation problem', 'ರೈತ'],
+        strongKeywords: ['agriculture', 'farmer', 'kisan', 'ಕೃಷಿ'],
+        keywords: ['seed', 'fertilizer', 'irrigation', 'soil', 'crop', 'farming', 'ಬೆಳೆ']
+    },
+    'Revenue Department': {
+        phrases: ['land record', 'property tax', 'land survey', 'patwari issue'],
+        strongKeywords: ['revenue', 'land', 'property', 'ಆಸ್ತಿ'],
+        keywords: ['tax', 'survey', 'patwari', 'registration', 'stamp', 'ತೆರಿಗೆ']
+    },
+    'Social Welfare': {
+        phrases: ['pension delay', 'senior citizen', 'disability scheme', 'widow pension'],
+        strongKeywords: ['pension', 'welfare', 'ಪರಿಹಾರ'],
+        keywords: ['disabled', 'senior', 'scheme', 'yojana', 'orphan', 'widow', 'ಯೋಜನೆ']
+    },
+    'Forest Department': {
+        phrases: ['tree cutting', 'wildlife entry', 'forest fire', 'illegal wood'],
+        strongKeywords: ['forest', 'wildlife', 'trees', 'ಅರಣ್ಯ'],
+        keywords: ['animal', 'environment', 'wood', 'timber', 'nature', 'ಮರ']
     }
 };
 
-/**
- * Calculates weighted match density for keywords and phrases over translated text.
- * Phrase match = 3 points. Keyword match = 1 point.
- * Computes a confidence score based on maximum observed matches capped mathematically.
- */
-const computeWeightedConfidence = (translatedText) => {
-    let bestCategory = null; // No default 'Other'
+const computeWeightedConfidence = (translatedText, originalText = "") => {
+    let bestCategory = null; 
     let maxScore = 0;
+    let finalMatchedKeywords = [];
     const lowerText = translatedText.toLowerCase();
+    const lowerOriginal = originalText.toLowerCase();
+
+    const safetyMatches = [
+        { terms: ['लाईट', 'दिवा', 'खांब', 'विद्युत', 'ಬೆಳಕು', 'ವಿದ್ಯುತ್', 'light', 'streetlight', 'lamp', 'power cut', 'बिजली कटौती', 'వీధి దీపాలు', 'தெரு விளக்கு'], dept: 'Electricity Department' },
+        { terms: ['पाणी', 'पाईप', 'ನೀರು', 'ನೀರ', 'water', 'pipe', 'leakage', 'गळती', 'लीकेज', 'தண்ணீர்', 'నీరు'], dept: 'Water Department' },
+        { terms: ['रस्ता', 'खड्डा', 'ರಸ್ತೆ', 'road', 'pothole', 'garbage', 'कचರಾ', 'गटार', 'குப்பை', 'చెత్త', 'ಕಸ'], dept: 'Municipal' },
+        { terms: ['ಕಳ್ಳತನ', 'ಚೋರಿ', 'theft', 'crime', 'police', 'திருட்டு', 'దొంగతనం'], dept: 'Police' }
+    ];
+
+    for (const match of safetyMatches) {
+        if (match.terms.some(term => lowerOriginal.includes(term))) {
+            return { category: match.dept, score: 100, matchedKeywords: ['Multilingual Safety Match'] };
+        }
+    }
 
     for (const [category, dict] of Object.entries(CATEGORY_DICTIONARY)) {
         let score = 0;
-        
-        // Check phrases (+3 heavily weighted)
+        let matchedInThisDept = [];
+
+        const phraseWeight = category === 'Electricity Department' ? 15 : 10;
         for (const phrase of dict.phrases) {
             if (lowerText.includes(phrase.toLowerCase())) {
-                score += 3;
+                score += phraseWeight;
+                matchedInThisDept.push(phrase);
             }
         }
-        
-        // Check keywords (+1 normal weight)
+
+        const strongWeight = category === 'Electricity Department' ? 8 : 5;
+        for (const kw of dict.strongKeywords) {
+            if (lowerText.includes(kw.toLowerCase())) {
+                score += strongWeight;
+                matchedInThisDept.push(kw);
+            }
+        }
+
+        const normalWeight = category === 'Electricity Department' ? 4 : 3;
         for (const kw of dict.keywords) {
             if (lowerText.includes(kw.toLowerCase())) {
-                score += 1;
+                score += normalWeight;
+                matchedInThisDept.push(kw);
             }
         }
 
         if (score > maxScore) {
             maxScore = score;
             bestCategory = category;
+            finalMatchedKeywords = matchedInThisDept;
         }
     }
     
-    if (maxScore > 0) {
-        // Assume maximum realistic target score is around ~5 points.
-        // Cap confidence at 1.0 (100%).
-        const calculatedConfidence = Math.min((maxScore / 5.0), 1.0);
-        return { category: bestCategory, confidence: calculatedConfidence };
-    } else {
-        return { category: null, confidence: 0.0 }; // Force AI fallback
-    }
+    return { category: bestCategory, score: maxScore, matchedKeywords: finalMatchedKeywords };
 };
 
-// Smart strict department lookup (Other completely eradicated)
 const findStrictDepartment = async (Department, category) => {
-    console.log(`[Router] Attempting to find department for category: "${category}"`);
-    let dept = await Department.findOne({ departmentName: new RegExp(`^${category}$`, 'i') });
+    if (!category) return null;
+
+    const normalizedCategory = category.trim().toLowerCase();
+    let dept = await Department.findOne({ departmentName: normalizedCategory });
     
     if (!dept) {
-        console.log(`[Router] Critical Regex failure for ${category}. Exact match attempt.`);
-        dept = await Department.findOne({ departmentName: category });
+        dept = await Department.findOne({ departmentName: new RegExp(`^${normalizedCategory}$`, 'i') });
     }
 
     if (!dept) {
-        console.log(`[Router] Found 0 mappings. Finding ANY department as absolute safety net.`);
-        dept = await Department.findOne(); // Grab whatever is available to prevent system crash
-        if (dept) console.log(`[Router] Safety Net kicked in. Selected: ${dept.departmentName}`);
+        const altName = normalizedCategory.includes('department') 
+            ? normalizedCategory.replace(' department', '').trim()
+            : `${normalizedCategory} department`;
+        dept = await Department.findOne({ departmentName: new RegExp(`^${altName}$`, 'i') });
+    }
+    
+    if (!dept) {
+        dept = await Department.findOne({ departmentName: new RegExp(normalizedCategory, 'i') });
     }
     
     return dept;
 };
 
-// 1. Static GET Routes (Highest Priority)
+// 1. Static GET Routes
 router.get('/my', auth, async (req, res) => {
     try {
         const complaints = await Complaint.find({ userId: req.user.id }).sort({ createdAt: -1 });
@@ -320,35 +529,26 @@ router.get('/unassigned', auth, async (req, res) => {
     try {
         if (req.user.role !== 'Officer') return res.status(403).json({ message: 'Only officers can access the pool' });
 
-        const Department = require('../models/Department');
         const officerDept = await Department.findById(req.user.departmentId);
+        if (!officerDept) return res.json([]);
 
-        if (!officerDept) {
-            console.warn(`Officer Pool Fetch: No department found for user ${req.user.id} (deptId: ${req.user.departmentId})`);
-            return res.json([]);
-        }
-
-        console.log(`Officer Pool Fetch: User=${req.user.email} Dept="${officerDept.departmentName}"`);
-
-        console.log(`Officer Pool Fetch: User=${req.user.email} Dept="${officerDept.departmentName}"`);
-
+        const officerId = req.user.id;
         const query = {
-            $and: [
-                {
-                    $or: [
-                        { assignedOfficerId: { $exists: false } },
-                        { assignedOfficerId: null }
-                    ]
-                },
-                { departmentId: officerDept._id } // Strictly filter by department ID
+            departmentId: officerDept._id,
+            status: { $in: ['NEW', 'ASSIGNED', 'IN_PROGRESS'] },
+            $or: [
+                { assignedOfficerId: officerId },
+                { assignedOfficerId: { $exists: false } },
+                { assignedOfficerId: null }
             ]
         };
 
-        const complaints = await Complaint.find(query).populate('userId', 'name phone').sort({ createdAt: -1 });
-        console.log(`Officer Pool Result: Found ${complaints.length} complaints for ${officerDept.departmentName}`);
+        const complaints = await Complaint.find(query)
+            .populate('userId', 'name phone')
+            .sort({ createdAt: -1 });
+
         res.json(complaints);
     } catch (err) {
-        console.error("Pool Fetch Error:", err);
         res.status(500).json({ message: err.message });
     }
 });
@@ -363,181 +563,169 @@ router.get('/assigned', auth, async (req, res) => {
     }
 });
 
-// (CATEGORY_KEYWORDS and findDepartmentForCategory are defined above the routes)
-
-// 2. Main POST Route (With AI Routing & Automated Assignment)
+// 2. Main POST Route
 router.post('/', auth, async (req, res) => {
     try {
-        const { title, description, location, imageData, language = 'en' } = req.body;
-        console.log("New Grievance Submission Received:", {
-            title,
-            language,
-            descriptionLength: description?.length,
-            hasLocation: !!location,
-            address: location?.address
-        });
+        const { title, description, location, imageData, language = 'en', categoryId } = req.body;
         
-        // 0. Base Input Validation
-        if (!title || typeof title !== 'string' || title.trim().length < 5) {
-            return res.status(400).json({ message: "A descriptive title (min 5 chars) is required." });
-        }
-        if (!description || typeof description !== 'string' || description.trim().length < 10) {
-            return res.status(400).json({ message: "A detailed description (min 10 chars) is required." });
-        }
-        if (!location || !location.address) {
-            return res.status(400).json({ message: "Valid location address is required." });
-        }
+        if (!title || title.trim().length < 5) return res.status(400).json({ message: "Title required" });
+        if (!description || description.trim().length < 10) return res.status(400).json({ message: "Description required" });
+        if (!location || !location.address) return res.status(400).json({ message: "Location required" });
 
         let resolvedLocation = { ...location };
         const combinedInput = `${title} ${description}`;
         
         let finalTranslatedTitle = title;
         let finalTranslatedDescription = description;
-        let finalCategory = 'Other';
+        let finalCategory = 'General Department';
         let routingConfidence = 0.0;
         let priority = "Medium";
+        let aiResultCategory = "NOT_CALLED";
+        let aiDetectedLanguage = "Unknown";
+        let keywordScore = 0;
+        let matchedKeywords = [];
+        let finalDecisionReason = "Default (General Department)";
+        let isDirectMatch = false;
 
-        const hasAI = !!process.env.OPENAI_API_KEY;
+        if (categoryId) {
+            const Category = require('../models/Category');
+            const foundCat = await Category.findOne({ categoryId });
+            if (foundCat) {
+                finalCategory = foundCat.department;
+                const translation = foundCat.translations.find(t => t.language === language) || foundCat.translations.find(t => t.language === 'en');
+                finalTranslatedTitle = translation ? translation.name : title;
+                finalDecisionReason = `Direct ID Match (${categoryId})`;
+                routingConfidence = 1.0;
+                isDirectMatch = true;
+            }
+        }
+
+
         const TranslationCache = require('../models/TranslationCache');
         const inputHash = crypto.createHash('sha256').update(combinedInput + language).digest('hex');
+        const hasAI = !!process.env.DEEPSEEK_API_KEY;
 
-        // STEP 1: TRANSLATION LAYER
-        if (language !== 'en' && hasAI) {
-            const cached = await TranslationCache.findOne({ textHash: inputHash });
-            if (cached) {
-                finalTranslatedTitle = cached.translatedText.split('|||')[0] || title;
-                finalTranslatedDescription = cached.translatedText.split('|||')[1] || description;
-            } else {
-                let translationSuccess = false;
-                for (let attempt = 1; attempt <= 2 && !translationSuccess; attempt++) {
-                    try {
-                        const trPrompt = `You are a professional translator. Translate the following complaint Title and Description into clear, readable English. Do not literally translate word-for-word if the meaning gets lost. Keep the tone professional.
-Return exactly valid JSON: { "translatedTitle": "string", "translatedDescription": "string" }`;
-                        
-                        const aiT = await axios.post('https://api.openai.com/v1/chat/completions', {
-                            model: 'gpt-4o-mini',
-                            messages: [
-                                { role: 'system', content: trPrompt },
-                                { role: 'user', content: `Title: ${title}\nDescription: ${description}` }
-                            ],
-                            temperature: 0.1,
-                            response_format: { type: 'json_object' }
-                        }, { headers: { 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}` }, timeout: 8000 });
+        const lowerOriginalText = combinedInput.toLowerCase();
+        
+        // Skip AI/Keyword routing if we have a direct ID match
+        if (!isDirectMatch) {
+            // 1. Multilingual Keyword Matcher
+            let kwRes = computeWeightedConfidence(combinedInput, combinedInput);
+            if (kwRes.score >= 10) {
+                finalCategory = kwRes.category;
+                routingConfidence = Math.min((kwRes.score / 20.0), 1.0);
+                finalDecisionReason = `Strong Keyword Match (${kwRes.matchedKeywords[0]})`;
+                matchedKeywords = kwRes.matchedKeywords;
+                keywordScore = kwRes.score;
+            }
 
-                        const pd = JSON.parse(aiT.data.choices[0].message.content);
-                        finalTranslatedTitle = pd.translatedTitle || title;
-                        finalTranslatedDescription = pd.translatedDescription || description;
-                        translationSuccess = true;
+            // 2. Electricity Priority Override (Wins over Municipal)
+            const electricityPriorityTerms = ['light', 'street light', 'lamp', 'electric', 'pole', 'power', 'ವಿದ್ಯುತ್', 'ಬೆಳಕು', 'ಲೈಟ್', 'दिवा', 'खांब', 'current', 'ಬೆಳಕು ಇಲ್ಲ', 'पथदिवे'];
+            const hasElectricity = electricityPriorityTerms.some(term => lowerOriginalText.includes(term.toLowerCase()));
 
-                        // Cache it
-                        await new TranslationCache({
-                            textHash: inputHash,
-                            originalText: combinedInput,
-                            translatedText: `${finalTranslatedTitle}|||${finalTranslatedDescription}`,
-                            language
-                        }).save();
+            // 3. Water Priority Override (Wins over Drainage/Municipal)
+            const waterPriorityTerms = ['pipe', 'leak', 'sewage', 'burst', 'water', 'ಪಾಲಿ', 'ನೀರು', 'पाणी', 'पाईप', 'गळती', 'ಕುಡಿಯುವ ನೀರು'];
+            const hasWater = waterPriorityTerms.some(term => lowerOriginalText.includes(term.toLowerCase()));
 
-                    } catch (e) {
-                        console.error(`[Translation] Failed attempt ${attempt}. Error:`, e.message);
-                    }
-                }
-                if (!translationSuccess) {
-                    console.log("[Translation] Complete failure, proceeding with original text.");
-                }
+            if (hasElectricity) {
+                finalCategory = 'Electricity Department';
+                finalDecisionReason = "Rule-Based Priority: ELECTRICITY (Street Light/Power Rule)";
+                routingConfidence = 1.0;
+            } else if (hasWater) {
+                finalCategory = 'Water Department';
+                finalDecisionReason = "Rule-Based Priority: WATER (Leakage/Supply Rule)";
+                routingConfidence = 1.0; 
             }
         }
 
-        // STEP 2: ROUTING LAYER (Weighted Confidence Matching on translated text)
-        const combinedEnglishText = `${finalTranslatedTitle} ${finalTranslatedDescription}`;
-        let keywordResult = computeWeightedConfidence(combinedEnglishText);
-        
-        finalCategory = keywordResult.category;
-        routingConfidence = keywordResult.confidence;
-        let isMisclassified = false;
-
-        // Backup AI Classification if confidence < 0.6
-        if (routingConfidence < 0.60 && hasAI) {
+        if (routingConfidence < 1.0 && hasAI) {
             try {
-                isMisclassified = true; // Indicates algorithm failed and requested AI adjustment
-                const aiCPrompt = `You are a strict grievance classifier.
-1. Strictly classify this complaint into exactly ONE of the following: Electricity, Water, PWD, Sanitation, Drainage, Garbage.
-2. NEVER classify as 'Other' under any circumstance. Find the best possible fit.
-3. Provide a confidence score between 0.0 and 1.0.
-4. Determine Priority: Low, Medium, High, Emergency.
-Return ONLY valid JSON: { "category": "category string", "confidence": number, "priority": "priority string" }`;
+                const cached = await TranslationCache.findOne({ textHash: inputHash });
+                if (cached) {
+                    const parsed = JSON.parse(cached.translatedText);
+                    finalTranslatedTitle = parsed.core_issue || parsed.translated_title || title;
+                    finalTranslatedDescription = parsed.translated_text || description;
+                    finalCategory = DEPARTMENT_CODE_MAPPING[parsed.department] || 'General Department';
+                    routingConfidence = 1.0;
+                    finalDecisionReason = "Cached AI Classification";
+                } else {
+                    const aiRes = await axios.post('https://api.deepseek.com/chat/completions', {
+                        model: 'deepseek-chat',
+                        messages: [
+                            { role: 'system', content: CLASSIFICATION_SYSTEM_PROMPT },
+                            { role: 'user', content: `Complaint Title: ${title}\nComplaint Description: ${description}` }
+                        ],
+                        temperature: 0.1,
+                        response_format: { type: 'json_object' }
+                    }, { headers: { 'Authorization': `Bearer ${process.env.DEEPSEEK_API_KEY}` }, timeout: 15000 });
 
-                const aiC = await axios.post('https://api.openai.com/v1/chat/completions', {
-                    model: 'gpt-4o-mini',
-                    messages: [
-                        { role: 'system', content: aiCPrompt },
-                        { role: 'user', content: combinedEnglishText }
-                    ],
-                    temperature: 0.1, // extremely deterministic
-                    response_format: { type: 'json_object' }
-                }, { headers: { 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}` }, timeout: 8000 });
+                    const result = JSON.parse(aiRes.data.choices[0].message.content);
+                    finalTranslatedDescription = result.translated_text;
+                    finalTranslatedTitle = result.core_issue || result.translated_text.substring(0, 50) + "...";
+                    const deptCode = result.department;
+                    finalCategory = DEPARTMENT_CODE_MAPPING[deptCode] || 'General Department';
+                    routingConfidence = 1.0;
+                    finalDecisionReason = `AI Classification (${deptCode})`;
+                    aiResultCategory = deptCode;
+                    aiDetectedLanguage = result.detected_language || "Unknown";
 
-                const pc = JSON.parse(aiC.data.choices[0].message.content);
-                // Validation of returned category ONLY accepting the requested 6
-                if (CATEGORY_DICTIONARY[pc.category]) {
-                    finalCategory = pc.category;
-                    routingConfidence = parseFloat(pc.confidence) || 0;
-                    if (pc.priority) priority = pc.priority;
-                } else if (!finalCategory) {
-                    finalCategory = 'Sanitation'; // Absolute final hardcode fallback if AI disobeys
+                    await new TranslationCache({
+                        textHash: inputHash,
+                        originalText: combinedInput,
+                        translatedText: JSON.stringify(result),
+                        language
+                    }).save();
                 }
             } catch (e) {
-                console.error("[Classification Backup] Failed.", e.message);
-                if (!finalCategory) finalCategory = 'Sanitation';
+                console.error("AI Error:", e.message);
+                let kwResFallback = computeWeightedConfidence(combinedInput, combinedInput);
+                finalCategory = kwResFallback.category || 'General Department';
+                routingConfidence = 0.5;
+                finalDecisionReason = "Fallback Keyword Match";
             }
         }
-        
-        // Zero "Other" tolerance safety net
-        if (!finalCategory) finalCategory = 'Sanitation';
 
-        // Department Resolution
+        const combinedEnglishText = `${finalTranslatedTitle} ${finalTranslatedDescription}`;
+
         const department = await findStrictDepartment(Department, finalCategory);
-        if (!department) {
-            // Ultimate fallback safety
-            return res.status(400).json({ message: "System configuration error. Please contact administrative staff." });
-        }
-        
-        const departmentId = department._id;
+        let departmentId = department?._id || null;
 
-        // 3. Create & Save Complaint
+        if (!departmentId) {
+             const generalDept = await Department.findOne({ departmentName: /general department/i });
+             departmentId = generalDept?._id || null;
+             finalCategory = 'General Department';
+        }
+
         const newComplaint = new Complaint({
             userId: req.user.id,
             ticketId: generateTicketId(),
+            categoryId: categoryId || null,
             title: finalTranslatedTitle, 
             description: finalTranslatedDescription, 
             originalText: combinedInput,
             translatedText: combinedEnglishText,
-            language: language,
+            language,
+            detectedLanguage: aiDetectedLanguage,
             confidence: routingConfidence,
-            isMisclassified,
             category: finalCategory,
             departmentId,
+            aiResultCategory,
+            keywordScore,
+            matchedKeywords,
+            finalDecisionReason,
             priorityLevel: priority,
-            location: {
-                ...resolvedLocation,
-                landmark: req.body.location?.landmark || null
-            },
+            location: { ...resolvedLocation, landmark: req.body.location?.landmark || null },
             imageData: imageData || null,
-            status: 'Pending',
+            status: 'NEW',
             slaDeadline: getSlaDeadline(priority)
         });
         await newComplaint.save();
-
-        // 4. Trigger Auto-Assignment 
         await assignmentService.assignToOfficer(newComplaint, departmentId);
 
-        // 5. Final Fetch for Response
-        const populated = await Complaint.findById(newComplaint._id)
-            .populate('assignedOfficerId', 'name')
-            .populate('departmentId');
-
+        const populated = await Complaint.findById(newComplaint._id).populate('assignedOfficerId', 'name').populate('departmentId');
+        socketService.emitNewComplaint(populated);
         res.json(populated);
     } catch (err) {
-        console.error("Grievance Creation FAILED:", err);
         res.status(500).json({ message: err.message });
     }
 });
@@ -546,13 +734,7 @@ Return ONLY valid JSON: { "category": "category string", "confidence": number, "
 router.get('/track/:ticketId', async (req, res) => {
     try {
         const ticketId = req.params.ticketId.trim().toUpperCase();
-        let complaint = await Complaint.findOne({ ticketId })
-            .populate('assignedOfficerId', 'name')
-            .populate('departmentId')
-            .select('-imageData');
-        if (!complaint && ticketId.length === 24) {
-            complaint = await Complaint.findById(ticketId).select('-imageData');
-        }
+        let complaint = await Complaint.findOne({ ticketId }).populate('assignedOfficerId', 'name').populate('departmentId').select('-imageData');
         if (!complaint) return res.status(404).json({ message: 'Ticket not found' });
         res.json(complaint);
     } catch (err) {
@@ -567,322 +749,201 @@ router.patch('/:id', auth, async (req, res) => {
         const updateData = {};
         if (status) updateData.status = status;
         if (officerId) updateData.assignedOfficerId = officerId;
-        const complaint = await Complaint.findByIdAndUpdate(req.params.id, updateData, { new: true })
-            .populate('assignedOfficerId', 'name');
+        const complaint = await Complaint.findByIdAndUpdate(req.params.id, updateData, { new: true }).populate('assignedOfficerId', 'name');
         res.json(complaint);
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
 });
 
-// Officer Flow: Accept Complaint
 router.patch('/:id/accept', auth, async (req, res) => {
     try {
         if (req.user.role !== 'Officer') return res.status(403).json({ message: 'Only officers can accept tasks' });
-
         const complaint = await Complaint.findOneAndUpdate(
-            {
-                _id: req.params.id,
-                $or: [
-                    { assignedOfficerId: { $exists: false } },
-                    { assignedOfficerId: null }
-                ]
-            },
-            { status: 'In Progress', acceptedAt: new Date(), assignedOfficerId: req.user.id },
-            { returnDocument: 'after' }
+            { _id: req.params.id, status: { $in: ['NEW', 'ASSIGNED', 'REOPENED'] } },
+            { status: 'ASSIGNED', assignedOfficerId: req.user.id, acceptedAt: new Date() },
+            { new: true }
         );
-
-        if (!complaint) return res.status(404).json({ message: 'Complaint not found or already taken' });
-
-        const User = require('../models/User');
-        await User.findByIdAndUpdate(req.user.id, { $inc: { activeCasesCount: 1 } });
-
+        if (!complaint) return res.status(404).json({ message: 'Complaint not available' });
+        socketService.emitStatusUpdate(complaint);
         res.json(complaint);
     } catch (err) {
-        console.error("Manual Accept Error:", err);
         res.status(500).json({ message: err.message });
     }
 });
 
-// Officer Flow: Claim from Pool + Resolve Directly (one-step resolution)
-router.patch('/:id/accept-and-resolve', auth, async (req, res) => {
-    try {
-        if (req.user.role !== 'Officer') return res.status(403).json({ message: 'Only officers can resolve tasks' });
-        const { resolutionNote, proofImage } = req.body;
-
-        if (!resolutionNote) return res.status(400).json({ message: 'Resolution note is required' });
-
-        // Find the complaint — it should belong to this officer's department
-        const Department = require('../models/Department');
-        const officerDept = await Department.findById(req.user.departmentId);
-
-        const complaint = await Complaint.findById(req.params.id);
-        if (!complaint) return res.status(404).json({ message: 'Complaint not found' });
-
-        // Allow if: unassigned (pool), or already assigned to this officer
-        const isUnassigned = !complaint.assignedOfficerId;
-        const isAssignedToMe = complaint.assignedOfficerId?.toString() === req.user.id;
-
-        if (!isUnassigned && !isAssignedToMe) {
-            return res.status(403).json({ message: 'This issue is assigned to another officer' });
-        }
-
-        const updated = await Complaint.findByIdAndUpdate(
-            req.params.id,
-            {
-                assignedOfficerId: req.user.id,
-                acceptedAt: complaint.acceptedAt || new Date(),
-                status: 'Resolved',
-                resolvedAt: new Date(),
-                resolutionNote,
-                proofImage: proofImage || '',
-                progress: 100
-            },
-            { returnDocument: 'after' }
-        );
-
-        // Update officer workload and performance
-        const User = require('../models/User');
-        const updateQuery = { $inc: { resolvedCount: 1 } };
-        if (!isUnassigned) updateQuery.$inc.activeCasesCount = -1;
-        await User.findByIdAndUpdate(req.user.id, updateQuery);
-
-        console.log(`Direct Resolve: ${updated.ticketId} by ${req.user.id} (${officerDept?.departmentName})`);
-        res.json(updated);
-    } catch (err) {
-        console.error("Direct Resolve Error:", err);
-        res.status(500).json({ message: err.message });
-    }
-});
-
-// Officer Flow: Update Progress
 router.patch('/:id/progress', auth, async (req, res) => {
     try {
-        if (req.user.role !== 'Officer') return res.status(403).json({ message: 'Only officers can update progress' });
+        if (req.user.role !== 'Officer') return res.status(403).json({ message: 'Only officers can log progress' });
         const { progress, note } = req.body;
-        const update = { progress, status: 'In Progress' }; // Upgrade Assigned → In Progress when officer starts
-        if (note) {
-            update.$push = { notes: { note, timestamp: new Date() } };
-        }
-        const complaint = await Complaint.findOneAndUpdate(
-            { _id: req.params.id, assignedOfficerId: req.user.id },
-            update,
-            { returnDocument: 'after' }
+        const complaint = await Complaint.findByIdAndUpdate(
+            req.params.id,
+            { 
+                progress: parseInt(progress), 
+                $push: { timeline: { status: 'IN_PROGRESS', note, timestamp: new Date() } },
+                status: 'IN_PROGRESS'
+            },
+            { new: true }
         );
-        if (!complaint) return res.status(404).json({ message: 'Task not found or not assigned to you' });
+        socketService.emitStatusUpdate(complaint);
         res.json(complaint);
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
 });
 
-// Officer Flow: Resolve
 router.patch('/:id/resolve', auth, async (req, res) => {
     try {
-        if (req.user.role !== 'Officer') return res.status(403).json({ message: 'Only officers can resolve tasks' });
+        if (req.user.role !== 'Officer') return res.status(403).json({ message: 'Only officers can resolve complaints' });
         const { resolutionNote, proofImage } = req.body;
-        const complaint = await Complaint.findOneAndUpdate(
-            { _id: req.params.id, assignedOfficerId: req.user.id },
-            {
-                status: 'Resolved',
-                resolvedAt: new Date(),
-                acceptedAt: new Date(), // set if not already set
-                resolutionNote,
+        const complaint = await Complaint.findByIdAndUpdate(
+            req.params.id,
+            { 
+                status: 'RESOLVED', 
+                resolutionNote, 
                 proofImage,
-                progress: 100
+                resolvedAt: new Date(),
+                progress: 100,
+                $push: { timeline: { status: 'RESOLVED', note: resolutionNote, timestamp: new Date() } }
             },
-            { returnDocument: 'after' }
+            { new: true }
         );
-
-        if (!complaint) return res.status(404).json({ message: 'Task not found or not assigned to you' });
-
-        // Decrease officer workload and increase performance on resolution
-        const User = require('../models/User');
+        
+        // Update officer stats
         await User.findByIdAndUpdate(req.user.id, { $inc: { activeCasesCount: -1, resolvedCount: 1 } });
+        
+        socketService.emitStatusUpdate(complaint);
         res.json(complaint);
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
 });
 
-// Citizen Flow: Feedback & Rating
+router.patch('/:id/accept-and-resolve', auth, async (req, res) => {
+    try {
+        if (req.user.role !== 'Officer') return res.status(403).json({ message: 'Only officers can resolve complaints' });
+        const { resolutionNote, proofImage } = req.body;
+        
+        const complaint = await Complaint.findByIdAndUpdate(
+            req.params.id,
+            { 
+                status: 'RESOLVED',
+                assignedOfficerId: req.user.id,
+                acceptedAt: new Date(),
+                resolutionNote, 
+                proofImage,
+                resolvedAt: new Date(),
+                progress: 100,
+                $push: { 
+                    timeline: [
+                        { status: 'ACCEPTED', note: 'Accepted for instant resolution', timestamp: new Date() },
+                        { status: 'RESOLVED', note: resolutionNote, timestamp: new Date() }
+                    ] 
+                }
+            },
+            { new: true }
+        );
+
+        await User.findByIdAndUpdate(req.user.id, { $inc: { resolvedCount: 1 } });
+        
+        socketService.emitStatusUpdate(complaint);
+        res.json(complaint);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+router.patch('/:id/reopen', auth, async (req, res) => {
+    try {
+        const complaint = await Complaint.findByIdAndUpdate(
+            req.params.id,
+            { 
+                status: 'REOPENED', 
+                progress: 0,
+                $push: { timeline: { status: 'REOPENED', note: 'Complaint reopened by citizen', timestamp: new Date() } }
+            },
+            { new: true }
+        );
+        socketService.emitStatusUpdate(complaint);
+        res.json(complaint);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
 router.patch('/:id/feedback', auth, async (req, res) => {
     try {
         const { rating, feedback } = req.body;
-
-        // Find first to check existence and ownership
-        const complaint = await Complaint.findById(req.params.id);
-
-        if (!complaint) {
-            return res.status(404).json({ message: 'Complaint not found' });
-        }
-
-        if (complaint.userId.toString() !== req.user.id) {
-            return res.status(403).json({ message: 'Unauthorized: You do not own this complaint' });
-        }
-
-        complaint.rating = rating;
-        complaint.feedback = feedback;
-        await complaint.save();
-
-        const updatedComplaint = await Complaint.findById(req.params.id).populate('assignedOfficerId', 'name');
-        res.json(updatedComplaint);
-    } catch (err) {
-        res.status(500).json({ message: err.message });
-    }
-});
-
-// Citizen Flow: Reopen
-router.patch('/:id/reopen', auth, async (req, res) => {
-    try {
-        const complaint = await Complaint.findOneAndUpdate(
-            { _id: req.params.id, userId: req.user.id, status: 'Resolved' },
-            { status: 'Reopened', reopened: true, progress: 0 },
-            { returnDocument: 'after' }
-        );
-        if (!complaint) return res.status(400).json({ message: 'Cannot reopen this complaint' });
-
-        // Re-increment officer workload
-        if (complaint.assignedOfficerId) {
-            const User = require('../models/User');
-            await User.findByIdAndUpdate(complaint.assignedOfficerId, { $inc: { activeCasesCount: 1 } });
-        }
-
-        const updatedComplaint = await Complaint.findById(complaint._id).populate('assignedOfficerId', 'name');
-        res.json(updatedComplaint);
-    } catch (err) {
-        res.status(500).json({ message: err.message });
-    }
-});
-
-// ==========================================
-// ADMIN CONTROL ENDPOINTS (RESTRICTED)
-// ==========================================
-
-
-
-// Admin: Reassign Complaint
-router.patch('/:id/reassign', auth, adminAuth, async (req, res) => {
-    try {
-        const { officerId } = req.body;
-        const complaint = await Complaint.findById(req.params.id);
-        if (!complaint) return res.status(404).json({ message: 'Complaint not found' });
-
-        // Handle Unassignment (Unstacking the officer and moving back to Pool)
-        if (!officerId || officerId === '' || officerId === 'null') {
-            const oldOfficerId = complaint.assignedOfficerId;
-            if (oldOfficerId) {
-                await User.findByIdAndUpdate(oldOfficerId, { $inc: { activeCasesCount: -1 } });
-            }
-            complaint.assignedOfficerId = null;
-            complaint.status = 'Pending';
-            if (!complaint.notes) complaint.notes = [];
-            complaint.notes.push({ note: `ADMIN ACTION: Unassigned from previous officer. Returned to Department Pool.` });
-            await complaint.save();
-            
-            const updated = await Complaint.findById(complaint._id).populate('assignedOfficerId', 'name email phone');
-            return res.json({ success: true, complaint: updated });
-        }
-
-        // Validate New Officer
-        const oldOfficerId = complaint.assignedOfficerId;
-        const newOfficer = await User.findById(officerId);
-        if (!newOfficer || newOfficer.role !== 'Officer') {
-            return res.status(400).json({ message: 'Invalid officer selected for assignment.' });
-        }
-
-        // Prevent redundant reassignment to same officer
-        if (oldOfficerId && oldOfficerId.toString() === officerId) {
-            return res.json({ success: true, complaint });
-        }
-
-        // Rebalance workloads
-        if (oldOfficerId) {
-            await User.findByIdAndUpdate(oldOfficerId, { $inc: { activeCasesCount: -1 } });
-        }
-        await User.findByIdAndUpdate(officerId, { $inc: { activeCasesCount: 1 } });
-
-        complaint.assignedOfficerId = officerId;
-        complaint.status = 'Escalated';
-        if (!complaint.notes) complaint.notes = [];
-        complaint.notes.push({ note: `ADMIN ESCALATION: Moved and escalated to ${newOfficer.name}` });
-        await complaint.save();
-
-        // Notify New Officer
-        await notificationService.send({
-            recipientId: officerId,
-            type: 'NEW_ASSIGNMENT',
-            message: `ADMIN ACTION: Case #${complaint.ticketId} has been ESCALATED to you.`,
-            complaintId: complaint._id,
-            priority: 'HIGH'
-        });
-
-        const updated = await Complaint.findById(complaint._id).populate('assignedOfficerId', 'name email phone');
-        res.json({ success: true, complaint: updated });
-    } catch (err) {
-        console.error(`[Admin Reassign Error] Complaint ID: ${req.params.id}, Error:`, err);
-        res.status(500).json({ message: "Failed to process reassignment. Check if the officer ID is valid." });
-    }
-});
-
-// Admin: Send Warning
-router.post('/:id/warn', auth, adminAuth, async (req, res) => {
-    try {
-        const { message } = req.body;
-        const complaint = await Complaint.findById(req.params.id);
-        if (!complaint || !complaint.assignedOfficerId) {
-            return res.status(400).json({ message: 'Cannot warn: No officer assigned' });
-        }
-
-        const warningMsg = message || `URGENT COMMAND WARNING: Stagnant progress on #${complaint.ticketId}. Resolve immediately.`;
-
-        await notificationService.send({
-            recipientId: complaint.assignedOfficerId,
-            type: 'ADMIN_WARNING',
-            message: warningMsg,
-            complaintId: complaint._id,
-            priority: 'HIGH'
-        });
-
-        complaint.hasWarning = true;
-        complaint.notes.push({ note: `SYSTEM ALERT: Command Warning issued to officer. Reason: ${warningMsg}` });
-        await complaint.save();
-
-        const updated = await Complaint.findById(req.params.id).populate('assignedOfficerId', 'name email phone');
-        res.json(updated);
-    } catch (err) {
-        res.status(500).json({ message: err.message });
-    }
-});
-
-// Admin: Set Priority
-router.patch('/:id/priority', auth, adminAuth, async (req, res) => {
-    try {
-        const { priorityLevel } = req.body;
         const complaint = await Complaint.findByIdAndUpdate(
-            req.params.id, 
-            { priorityLevel }, 
+            req.params.id,
+            { rating, feedback },
             { new: true }
-        ).populate('assignedOfficerId', 'name email phone');
-        
+        );
         res.json(complaint);
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
 });
 
-// Admin: Add Remark
-router.post('/:id/remark', auth, adminAuth, async (req, res) => {
+router.post('/:id/warn', auth, async (req, res) => {
     try {
+        if (req.user.role !== 'Admin') return res.status(403).json({ message: 'Admin access required' });
+        const { message } = req.body;
+        const complaint = await Complaint.findByIdAndUpdate(
+            req.params.id,
+            { hasWarning: true, $push: { timeline: { status: 'WARNING', note: message, timestamp: new Date() } } },
+            { new: true }
+        );
+        socketService.emitStatusUpdate(complaint);
+        res.json(complaint);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+router.post('/:id/remark', auth, async (req, res) => {
+    try {
+        if (req.user.role !== 'Admin') return res.status(403).json({ message: 'Admin access required' });
         const { remark } = req.body;
-        const complaint = await Complaint.findById(req.params.id);
-        if (!complaint) return res.status(404).json({ message: 'Complaint not found' });
+        const complaint = await Complaint.findByIdAndUpdate(
+            req.params.id,
+            { $push: { timeline: { status: 'REMARK', note: remark, timestamp: new Date() } } },
+            { new: true }
+        );
+        socketService.emitStatusUpdate(complaint);
+        res.json(complaint);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
 
-        complaint.notes.push({ note: `ADMIN REMARK: ${remark}` });
-        await complaint.save();
+router.patch('/:id/priority', auth, async (req, res) => {
+    try {
+        if (req.user.role !== 'Admin') return res.status(403).json({ message: 'Admin access required' });
+        const { priorityLevel } = req.body;
+        const complaint = await Complaint.findByIdAndUpdate(
+            req.params.id,
+            { priorityLevel },
+            { new: true }
+        );
+        socketService.emitStatusUpdate(complaint);
+        res.json(complaint);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
 
-        const updated = await Complaint.findById(req.params.id).populate('assignedOfficerId', 'name email phone');
-        res.json(updated);
+router.patch('/:id/reassign', auth, async (req, res) => {
+    try {
+        if (req.user.role !== 'Admin') return res.status(403).json({ message: 'Admin access required' });
+        const { officerId } = req.body;
+        const complaint = await Complaint.findByIdAndUpdate(
+            req.params.id,
+            { assignedOfficerId: officerId, status: 'ASSIGNED' },
+            { new: true }
+        ).populate('assignedOfficerId', 'name');
+        socketService.emitStatusUpdate(complaint);
+        res.json(complaint);
     } catch (err) {
         res.status(500).json({ message: err.message });
     }

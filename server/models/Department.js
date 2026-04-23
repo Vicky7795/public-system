@@ -9,4 +9,11 @@ const departmentSchema = new mongoose.Schema({
     contactWhatsApp: { type: String },
 }, { timestamps: true });
 
+// Normalize departmentName before saving
+departmentSchema.pre('save', async function() {
+    if (this.departmentName) {
+        this.departmentName = this.departmentName.trim().toLowerCase();
+    }
+});
+
 module.exports = mongoose.model('Department', departmentSchema);

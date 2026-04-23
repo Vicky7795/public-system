@@ -24,22 +24,27 @@ import BackButton from '../components/BackButton';
 import { useTranslation } from 'react-i18next';
 
 const statusConfig = {
-    'Pending': { 
+    'NEW': { 
         color: 'text-amber-600 bg-amber-50 border-amber-200', 
         icon: <Clock size={14} />, 
         step: 0,
     },
-    'In Progress': { 
+    'ASSIGNED': { 
         color: 'text-blue-600 bg-blue-50 border-blue-200', 
         icon: <Loader2 size={14} className="animate-spin" />, 
         step: 1,
     },
-    'Resolved': { 
+    'IN_PROGRESS': { 
+        color: 'text-blue-600 bg-blue-50 border-blue-200', 
+        icon: <Loader2 size={14} className="animate-spin" />, 
+        step: 1,
+    },
+    'RESOLVED': { 
         color: 'text-emerald-600 bg-emerald-50 border-emerald-200', 
         icon: <CheckCircle2 size={14} />, 
         step: 2,
     },
-    'Reopened': { 
+    'REOPENED': { 
         color: 'text-rose-600 bg-rose-50 border-rose-200', 
         icon: <RefreshCcw size={14} />, 
         step: 0,
@@ -115,7 +120,7 @@ const TrackTicket = () => {
         window.open(url, '_blank');
     };
 
-    const cfg = result ? (statusConfig[result.status] || statusConfig['Pending']) : null;
+    const cfg = result ? (statusConfig[result.status] || statusConfig['NEW']) : null;
     const dept = result?.departmentId;
 
     return (
@@ -255,7 +260,7 @@ const TrackTicket = () => {
                             </div>
 
                             {/* Resolution Proof (If any) */}
-                            {result.status === 'Resolved' && result.proofImage && (
+                            {result.status === 'RESOLVED' && result.proofImage && (
                                 <div className="space-y-3 pt-4 border-t border-slate-100">
                                     <label className="text-[12px] font-bold text-slate-700 uppercase tracking-widest flex items-center gap-2">
                                         <CheckCircle2 size={14} className="text-emerald-500" /> {t('track.proof_label')}
@@ -280,7 +285,7 @@ const TrackTicket = () => {
                             </div>
 
                             {/* Feedback Section (Only for Citizen on their own resolved ticket) */}
-                            {result.status === 'Resolved' && !result.rating && (
+                            {result.status === 'RESOLVED' && !result.rating && (
                                 <div className="mt-8 p-6 bg-blue-50/50 rounded-2xl border border-blue-100 text-center">
                                     <h4 className="font-bold text-slate-800 mb-4">{t('track.rate_title')}</h4>
                                     <div className="flex justify-center gap-2 mb-6">

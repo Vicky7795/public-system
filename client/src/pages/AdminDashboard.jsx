@@ -18,6 +18,7 @@ import SummaryCard from '../components/SummaryCard';
 import NotificationCenter from '../components/NotificationCenter';
 import ComplaintsTable from '../components/admin/ComplaintsTable';
 import DeptCard from '../components/admin/DeptCard';
+import socket from '../utils/socket';
 
 const DEPT_COLORS = ['#1D4ED8', '#7C3AED', '#059669', '#D97706', '#DC2626', '#0891B2', '#9333EA', '#16A34A'];
 
@@ -88,6 +89,27 @@ const AdminDashboard = () => {
     useEffect(() => { fetchAll(); }, [fetchAll]);
     useEffect(() => { setMounted(true); }, []);
 
+    // Socket.io for real-time updates
+    useEffect(() => {
+        socket.connect();
+
+        socket.on('new_complaint', (newComplaint) => {
+            setComplaints(prev => [newComplaint, ...prev]);
+            addToast(`New complaint filed: #${newComplaint.ticketId}`, 'info');
+        });
+
+        socket.on('status_update', (updatedComplaint) => {
+            setComplaints(prev => prev.map(c => c._id === updatedComplaint._id ? updatedComplaint : c));
+            addToast(`Complaint #${updatedComplaint.ticketId} status updated to ${updatedComplaint.status}`, 'success');
+        });
+
+        return () => {
+            socket.off('new_complaint');
+            socket.off('status_update');
+            socket.disconnect();
+        };
+    }, []);
+
     const fetchOfficerDetails = useCallback(async (officerId) => {
         if (!officerId) return;
         setOfficerLoading(true);
@@ -117,14 +139,14 @@ const AdminDashboard = () => {
         }
     }, [commandModal.show, commandModal.type, commandModal.complaint?.assignedOfficerId?._id, fetchOfficerDetails]);
 
-    const resolvedCount = complaints.filter(c => c.status === 'Resolved').length;
-    const inProgressCount = complaints.filter(c => c.status === 'In Progress').length;
-    const pendingCount = complaints.filter(c => c.status === 'Pending').length;
+    const resolvedCount = complaints.filter(c => c.status === 'RESOLVED').length;
+    const inProgressCount = complaints.filter(c => ['ASSIGNED', 'IN_PROGRESS', 'REOPENED', 'OVERDUE', 'ESCALATED'].includes(c.status)).length;
+    const pendingCount = complaints.filter(c => c.status === 'NEW').length;
 
     const statusPie = [
-        { name: 'Pending', value: pendingCount, color: '#94A3B8' },
-        { name: 'In Progress', value: inProgressCount, color: '#F97316' },
-        { name: 'Resolved', value: resolvedCount, color: '#16A34A' },
+        { name: 'NEW', value: pendingCount, color: '#94A3B8' },
+        { name: 'IN PROGRESS', value: inProgressCount, color: '#F97316' },
+        { name: 'RESOLVED', value: resolvedCount, color: '#16A34A' },
     ].filter(d => d.value > 0);
 
     const monthlyData = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'].map(m => ({

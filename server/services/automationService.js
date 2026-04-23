@@ -21,14 +21,14 @@ const automationService = {
         try {
             // 1. Find complaints that are overdue but not yet marked
             const breachCases = await Complaint.find({
-                status: { $in: ['Assigned', 'In Progress', 'Pending', 'Reopened', 'Overdue'] },
+                status: { $in: ['ASSIGNED', 'IN_PROGRESS', 'REOPENED', 'OVERDUE'] },
                 slaDeadline: { $lt: now }
             });
 
             for (const c of breachCases) {
-                // If it's already "Overdue" but older than 24h, mark as "Escalated"
-                if (c.status === 'Overdue' && c.slaDeadline < yesterday) {
-                    c.status = 'Escalated';
+                // If it's already "OVERDUE" but older than 24h, mark as "ESCALATED"
+                if (c.status === 'OVERDUE' && c.slaDeadline < yesterday) {
+                    c.status = 'ESCALATED';
                     await c.save();
 
                     // Update officer escalated count
@@ -59,9 +59,9 @@ const automationService = {
                     continue;
                 }
 
-                // Initial transition to Overdue
-                if (c.status !== 'Overdue' && c.status !== 'Escalated') {
-                    c.status = 'Overdue';
+                // Initial transition to OVERDUE
+                if (c.status !== 'OVERDUE' && c.status !== 'ESCALATED') {
+                    c.status = 'OVERDUE';
                     await c.save();
 
                     if (c.assignedOfficerId) {
