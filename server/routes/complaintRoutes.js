@@ -720,8 +720,8 @@ router.post('/', auth, async (req, res) => {
             status: 'NEW',
             slaDeadline: getSlaDeadline(priority)
         });
-        await newComplaint.save();
         await assignmentService.assignToOfficer(newComplaint, departmentId);
+        await newComplaint.save();
 
         const populated = await Complaint.findById(newComplaint._id).populate('assignedOfficerId', 'name').populate('departmentId');
         socketService.emitNewComplaint(populated);

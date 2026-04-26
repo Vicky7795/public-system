@@ -137,6 +137,9 @@
     "submit_btn": "Submit Official Grievance",
     "submitting_btn": "Finalising Submission...",
     "error_location": "Please pinpoint your location on the map to file a grievance.",
+    "category_label": "Complaint Category",
+    "select_category_placeholder": "Select a Category (Optional)",
+    "category_hint": "Choosing a category ensures faster routing.",
     "success": {
       "title": "Grievance Submitted!",
       "desc": "Your issue has been assigned to the relevant department based on its location and content.",

@@ -31,10 +31,9 @@ const assignmentService = {
                 return null;
             }
 
-            // 3. Update & Commit Assignment
+            // 3. Update Object Properties (DO NOT SAVE YET - calling route will handle persistence)
             complaint.assignedOfficerId = officer._id;
-            complaint.status = 'ASSIGNED'; // User requested strict ASSIGNED naming
-            await complaint.save();
+            complaint.status = 'ASSIGNED'; 
 
             // 4. Update stats for the assigned individual
             await User.findByIdAndUpdate(officer._id, { $inc: { activeCasesCount: 1 } });
@@ -49,8 +48,6 @@ const assignmentService = {
             });
 
             console.log(`[ASSIGNMENT SUCCESS] ID: ${complaint._id}, Ticket: ${complaint.ticketId}`);
-            console.log(`[DEBUG LOG] Complaint Dept ID: ${departmentId}`);
-            console.log(`[DEBUG LOG] Officer Dept ID: ${officer.departmentId}`);
             console.log(`[DEBUG LOG] AssignedTo: ${officer.name} (${officer._id})`);
             console.log(`[DEBUG LOG] AssignmentReason: ${assignmentReason}`);
             

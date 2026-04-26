@@ -160,18 +160,18 @@ const SubmitComplaint = () => {
                         </div>
 
                         <div>
-                            <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">{t('submit.success.category_label')}</label>
+                            <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">{t('submit.category_label')}</label>
                             <select
                                 className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-govBlue focus:ring-4 focus:ring-blue-50 outline-none transition-all font-medium text-slate-800"
                                 value={selectedCategory}
                                 onChange={(e) => setSelectedCategory(e.target.value)}
                             >
-                                <option value="">{t('submit.select_category_placeholder', 'Select a Category (Optional)')}</option>
+                                <option value="">{t('submit.select_category_placeholder')}</option>
                                 {categories.map(cat => (
                                     <option key={cat.categoryId} value={cat.categoryId}>{cat.name}</option>
                                 ))}
                             </select>
-                            <p className="text-[10px] text-slate-400 mt-2 font-bold italic">💡 {t('submit.category_hint', 'Choosing a category ensures faster routing.')}</p>
+                            <p className="text-[10px] text-slate-400 mt-2 font-bold italic">💡 {t('submit.category_hint')}</p>
                         </div>
 
                         <div>
