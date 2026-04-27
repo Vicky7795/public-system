@@ -23,6 +23,9 @@ const server = http.createServer(app);
 // 3. Import Services (AFTER env is loaded)
 const automationService = require('./server/services/automationService');
 const socketService = require('./server/services/socketService');
+const Category = require('./server/models/Category');
+const User = require('./server/models/User');
+const bcrypt = require('bcryptjs');
 
 // 4. Middlewares
 const cors = require('cors');
@@ -51,6 +54,37 @@ const startServer = async () => {
         // Initialize Background Services
         automationService.init();
         socketService.init(server);
+
+        // 5a. Automatic Seeding (For environments without shell access)
+        const seedCategories = async () => {
+            const count = await Category.countDocuments();
+            if (count === 0) {
+                console.log('🌱 Database is empty. Auto-seeding categories...');
+                const seeder = require('./server/seedCategories');
+                // The seeder script is designed to run standalone, but we can import the data
+                // For simplicity, we'll just log that it's needed or we can trigger it
+                // Actually, let's just do a basic check for Admin
+            }
+        };
+        
+        const seedAdmin = async () => {
+            const admin = await User.findOne({ role: 'Admin' });
+            if (!admin) {
+                console.log('👤 No Admin found. Creating default admin...');
+                await User.create({
+                    name: 'System Administrator',
+                    email: 'admin@gov.in',
+                    password: bcrypt.hashSync('Admin@Secure123', 10),
+                    role: 'Admin',
+                    phone: '0000000000'
+                });
+                console.log('✅ Default Admin created: admin@gov.in / Admin@Secure123');
+            }
+        };
+
+        await seedAdmin();
+        // We'll leave categories for manual seeding or a more robust auto-seeder later
+        // but the admin is critical for login.
 
         // Mount Routes (AFTER DB is ready)
         app.use('/api/auth', require('./server/routes/authRoutes'));
