@@ -176,7 +176,8 @@ const DEPARTMENT_CODE_MAPPING = {
     'REVENUE': 'Revenue Department',
     'FOREST': 'Forest Department',
     'PWD': 'PWD',
-    'GENERAL': 'General Department'
+    'GENERAL': 'Unassigned',
+    'UNASSIGNED': 'Unassigned'
 };
 
 // Helper to generate Ticket ID
@@ -223,9 +224,13 @@ router.get('/public-stats', async (req, res) => {
             accuracy: "92%",
             responseTime: `${avgResponseTime}h`
         });
+
+
     } catch (err) {
+        console.error('[STATS ERROR]:', err);
         res.status(500).json({ message: err.message });
     }
+
 });
 
 /**
@@ -586,6 +591,7 @@ router.post('/', auth, async (req, res) => {
         let matchedKeywords = [];
         let finalDecisionReason = "Default (General Department)";
         let isDirectMatch = false;
+        let requiresTriage = false;
 
         if (categoryId) {
             const Category = require('../models/Category');
@@ -600,10 +606,12 @@ router.post('/', auth, async (req, res) => {
             }
         }
 
-
         const TranslationCache = require('../models/TranslationCache');
         const inputHash = crypto.createHash('sha256').update(combinedInput + language).digest('hex');
-        const hasAI = !!process.env.DEEPSEEK_API_KEY;
+        
+        const deepseekKey = process.env.DEEPSEEK_API_KEY;
+        const openaiKey = process.env.OPENAI_API_KEY;
+        const hasAI = !!(deepseekKey || openaiKey);
 
         const lowerOriginalText = combinedInput.toLowerCase();
         
@@ -649,26 +657,51 @@ router.post('/', auth, async (req, res) => {
                     routingConfidence = 1.0;
                     finalDecisionReason = "Cached AI Classification";
                 } else {
-                    const aiRes = await axios.post('https://api.deepseek.com/chat/completions', {
-                        model: 'deepseek-chat',
-                        messages: [
-                            { role: 'system', content: CLASSIFICATION_SYSTEM_PROMPT },
-                            { role: 'user', content: `Complaint Title: ${title}\nComplaint Description: ${description}` }
-                        ],
-                        temperature: 0.1,
-                        response_format: { type: 'json_object' }
-                    }, { headers: { 'Authorization': `Bearer ${process.env.DEEPSEEK_API_KEY}` }, timeout: 15000 });
+                    let aiRes;
+                    let usedProvider = "";
+
+                    if (deepseekKey) {
+                        usedProvider = "DeepSeek";
+                        aiRes = await axios.post('https://api.deepseek.com/chat/completions', {
+                            model: 'deepseek-chat',
+                            messages: [
+                                { role: 'system', content: CLASSIFICATION_SYSTEM_PROMPT },
+                                { role: 'user', content: `Complaint Title: ${title}\nComplaint Description: ${description}` }
+                            ],
+                            temperature: 0.1,
+                            response_format: { type: 'json_object' }
+                        }, { headers: { 'Authorization': `Bearer ${deepseekKey}` }, timeout: 15000 });
+                    } else if (openaiKey) {
+                        usedProvider = "OpenAI";
+                        aiRes = await axios.post('https://api.openai.com/v1/chat/completions', {
+                            model: 'gpt-4o-mini',
+                            messages: [
+                                { role: 'system', content: CLASSIFICATION_SYSTEM_PROMPT },
+                                { role: 'user', content: `Complaint Title: ${title}\nComplaint Description: ${description}` }
+                            ],
+                            temperature: 0.1,
+                            response_format: { type: 'json_object' }
+                        }, { headers: { 'Authorization': `Bearer ${openaiKey}` }, timeout: 15000 });
+                    }
 
                     const result = JSON.parse(aiRes.data.choices[0].message.content);
                     finalTranslatedDescription = result.translated_text;
                     finalTranslatedTitle = result.core_issue || result.translated_text.substring(0, 50) + "...";
                     const deptCode = result.department;
-                    finalCategory = DEPARTMENT_CODE_MAPPING[deptCode] || 'General Department';
+                    finalCategory = DEPARTMENT_CODE_MAPPING[deptCode] || 'Unassigned';
                     priority = result.priority_level || 'Medium';
-                    routingConfidence = 1.0;
-                    finalDecisionReason = `AI Classification (${deptCode})`;
+                    routingConfidence = result.confidence || 1.0;
+                    finalDecisionReason = `AI Classification (${usedProvider}: ${deptCode})`;
                     aiResultCategory = deptCode;
                     aiDetectedLanguage = result.detected_language || "Unknown";
+
+                    // FLAG FOR TRIAGE if confidence is low or AI returned GENERAL/UNASSIGNED
+                    if (routingConfidence < 0.6 || deptCode === 'GENERAL' || deptCode === 'UNASSIGNED') {
+                        requiresTriage = true;
+                        finalCategory = 'Needs Review';
+                        finalDecisionReason = `Low Confidence AI (${usedProvider}: ${deptCode}) [FLAGGED FOR TRIAGE]`;
+                    }
+
 
                     await new TranslationCache({
                         textHash: inputHash,
@@ -691,10 +724,17 @@ router.post('/', auth, async (req, res) => {
         const department = await findStrictDepartment(Department, finalCategory);
         let departmentId = department?._id || null;
 
-        if (!departmentId) {
+        if (!departmentId || finalCategory === 'Unassigned' || finalCategory === 'Needs Review') {
+             // Default to General Department if it exists, but keep the category as 'Needs Review'
              const generalDept = await Department.findOne({ departmentName: /general department/i });
              departmentId = generalDept?._id || null;
-             finalCategory = 'General Department';
+             if (!departmentId) {
+                // If even General Department is missing, we must find any fallback
+                const anyDept = await Department.findOne();
+                departmentId = anyDept?._id || null;
+             }
+             requiresTriage = true;
+             finalCategory = 'Needs Review';
         }
 
         const newComplaint = new Complaint({
@@ -707,6 +747,7 @@ router.post('/', auth, async (req, res) => {
             translatedText: combinedEnglishText,
             language,
             detectedLanguage: aiDetectedLanguage,
+            requiresTriage,
             confidence: routingConfidence,
             category: finalCategory,
             departmentId,
@@ -717,9 +758,10 @@ router.post('/', auth, async (req, res) => {
             priorityLevel: priority,
             location: { ...resolvedLocation, landmark: req.body.location?.landmark || null },
             imageData: imageData || null,
-            status: 'NEW',
+            status: requiresTriage ? 'NEEDS_REVIEW' : 'NEW',
             slaDeadline: getSlaDeadline(priority)
         });
+
         await assignmentService.assignToOfficer(newComplaint, departmentId);
         await newComplaint.save();
 

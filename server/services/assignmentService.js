@@ -33,7 +33,9 @@ const assignmentService = {
 
             // 3. Update Object Properties (DO NOT SAVE YET - calling route will handle persistence)
             complaint.assignedOfficerId = officer._id;
-            complaint.status = 'ASSIGNED'; 
+            if (complaint.status === 'NEW') {
+                complaint.status = 'ASSIGNED'; 
+            }
 
             // 4. Update stats for the assigned individual
             await User.findByIdAndUpdate(officer._id, { $inc: { activeCasesCount: 1 } });

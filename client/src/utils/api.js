@@ -22,7 +22,7 @@ api.interceptors.response.use(
             console.error('API Connectivity Error: Backend server appears to be offline.');
             return Promise.reject({
                 ...error,
-                message: 'Unable to connect to government server. Please ensure the backend is running on port 5000.'
+                message: 'Unable to connect to the government server. Please check your internet connection or try again later.'
             });
         }
 

@@ -160,13 +160,16 @@ const AdminDashboard = () => {
 
     const resolvedCount = complaints.filter(c => c.status === 'RESOLVED').length;
     const inProgressCount = complaints.filter(c => ['ASSIGNED', 'IN_PROGRESS', 'REOPENED', 'OVERDUE', 'ESCALATED'].includes(c.status)).length;
-    const pendingCount = complaints.filter(c => c.status === 'NEW').length;
+    const pendingCount = complaints.filter(c => ['NEW', 'NEEDS_REVIEW'].includes(c.status)).length;
+
 
     const statusPie = [
-        { name: 'NEW', value: pendingCount, color: '#94A3B8' },
+        { name: 'NEEDS TRIAGE', value: complaints.filter(c => c.status === 'NEEDS_REVIEW').length, color: '#D97706' },
+        { name: 'NEW', value: complaints.filter(c => c.status === 'NEW').length, color: '#94A3B8' },
         { name: 'IN PROGRESS', value: inProgressCount, color: '#F97316' },
         { name: 'RESOLVED', value: resolvedCount, color: '#16A34A' },
     ].filter(d => d.value > 0);
+
 
     const monthlyData = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'].map(m => ({
         name: m, filed: Math.floor(Math.random() * 60 + 20), resolved: Math.floor(Math.random() * 40 + 10)

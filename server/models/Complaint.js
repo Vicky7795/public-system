@@ -10,7 +10,8 @@ const complaintSchema = new mongoose.Schema({
     departmentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Department' },
     priority: { type: String }, // Legacy field
     priorityLevel: { type: String, enum: ['Low', 'Medium', 'High'], default: 'Low' },
-    status: { type: String, enum: ['NEW', 'ASSIGNED', 'IN_PROGRESS', 'RESOLVED', 'REOPENED', 'OVERDUE', 'ESCALATED'], default: 'NEW' },
+    status: { type: String, enum: ['NEW', 'NEEDS_REVIEW', 'ASSIGNED', 'IN_PROGRESS', 'RESOLVED', 'REOPENED', 'OVERDUE', 'ESCALATED'], default: 'NEW' },
+
     imageData: { type: String },
     // Multilingual AI Fields
     originalText: { type: String }, // Raw description in native language
@@ -19,6 +20,7 @@ const complaintSchema = new mongoose.Schema({
     detectedLanguage: { type: String }, // Language detected by AI
     confidence: { type: Number, min: 0, max: 1 }, // Added for automatic routing threshold
     isMisclassified: { type: Boolean, default: false }, // AI categorization fallback tracking
+    requiresTriage: { type: Boolean, default: false }, // Manual review needed if AI confidence low
     
     // Logic Tracking
     aiResultCategory: { type: String }, // Raw category returned by AI

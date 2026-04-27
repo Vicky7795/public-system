@@ -65,7 +65,9 @@ router.post('/register', async (req, res) => {
 // Login
 router.post('/login', async (req, res) => {
     try {
+        console.log('[DEBUG] Login request received:', req.body);
         const { email, password } = req.body;
+
         const normalizedEmail = email.toLowerCase().trim();
 
         const user = await User.findOne({ email: normalizedEmail });
@@ -79,8 +81,10 @@ router.post('/login', async (req, res) => {
         const token = jwt.sign({ id: user._id, role: user.role, departmentId: user.departmentId }, process.env.JWT_SECRET);
         res.json({ token, user: { id: user._id, name: user.name, role: user.role, departmentId: user.departmentId } });
     } catch (err) {
+        console.error('[LOGIN ERROR]:', err);
         res.status(500).json({ message: err.message });
     }
+
 });
 
 // Get all Officers (for Admin Management)

@@ -7,7 +7,9 @@ const ComplaintsTable = ({ complaints, allOfficers, onAction, setCommandModal, s
             case 'RESOLVED': return 'text-green-600 bg-green-50 border-green-100';
             case 'OVERDUE': return 'text-red-600 bg-red-50 border-red-100 animate-pulse';
             case 'ESCALATED': return 'text-white bg-red-600 border-red-700 font-black shadow-lg shadow-red-100';
+            case 'NEEDS_REVIEW': return 'text-amber-600 bg-amber-50 border-amber-200 font-bold';
             case 'IN_PROGRESS': return 'text-orange-600 bg-orange-50 border-orange-100';
+
             case 'ASSIGNED': return 'text-blue-600 bg-blue-50 border-blue-200';
             default: return 'text-slate-500 bg-slate-50 border-slate-100';
         }
@@ -31,6 +33,7 @@ const ComplaintsTable = ({ complaints, allOfficers, onAction, setCommandModal, s
                             <tr key={c._id} className="hover:bg-gray-50/50 transition-all group">
                                 <td className="px-8 py-5">
                                     <span className="font-mono text-xs font-black text-[#1D4ED8] bg-blue-50 border border-blue-100/50 px-2 py-1 rounded shadow-sm">#{c.ticketId}</span>
+                                    {c.requiresTriage && <div className="mt-1 text-[8px] font-black text-amber-600 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-md uppercase tracking-tighter flex items-center gap-1 w-fit"><AlertCircle size={10} /> Needs Triage</div>}
                                     {c.priorityLevel === 'High' && <div className="mt-1 text-[8px] font-black text-red-500 uppercase tracking-tighter flex items-center gap-1"><AlertTriangle size={10} /> High Priority</div>}
                                     {c.hasWarning && <div className="mt-1 text-[8px] font-black text-orange-500 uppercase tracking-tighter flex items-center gap-1 animate-pulse"><AlertCircle size={10} /> Sanctioned</div>}
                                 </td>

@@ -21,16 +21,36 @@ const SubmitComplaint = () => {
     const fileInputRef = useRef(null);
     const navigate = useNavigate();
 
+    const [categoriesLoading, setCategoriesLoading] = useState(true);
+    const [categoriesError, setCategoriesError] = useState('');
+
     useEffect(() => {
         const token = localStorage.getItem('token');
         if (!token) navigate('/citizen/login', { replace: true });
         
         const fetchCategories = async () => {
+            setCategoriesLoading(true);
+            setCategoriesError(''); // Reset error
             try {
+                console.log('Fetching categories for language:', i18n.language);
                 const res = await api.get(`/categories?lang=${i18n.language || 'en'}`);
-                setCategories(res.data);
+                console.log('Categories fetched:', res.data.length);
+                
+                if (res.data && Array.isArray(res.data)) {
+                    setCategories(res.data);
+                    if (res.data.length === 0) {
+                        setCategoriesError('No categories available in the system.');
+                    }
+                } else {
+                    console.error('Invalid categories data format:', res.data);
+                    setCategoriesError('System error: Invalid category data.');
+                }
             } catch (err) {
                 console.error('Failed to fetch categories:', err);
+                const msg = err.response?.data?.message || err.message || 'Could not load categories.';
+                setCategoriesError(`Error: ${msg}`);
+            } finally {
+                setCategoriesLoading(false);
             }
         };
         fetchCategories();
@@ -162,11 +182,12 @@ const SubmitComplaint = () => {
                         <div>
                             <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">{t('submit.category_label')}</label>
                             <select
-                                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-govBlue focus:ring-4 focus:ring-blue-50 outline-none transition-all font-medium text-slate-800"
+                                className={`w-full px-4 py-3 rounded-xl border ${categoriesError ? 'border-red-300 bg-red-50' : 'border-slate-200'} focus:border-govBlue focus:ring-4 focus:ring-blue-50 outline-none transition-all font-medium text-slate-800`}
                                 value={selectedCategory}
                                 onChange={(e) => setSelectedCategory(e.target.value)}
+                                disabled={categoriesLoading}
                             >
-                                <option value="">{t('submit.select_category_placeholder')}</option>
+                                <option value="">{categoriesLoading ? 'Loading Categories...' : categoriesError ? categoriesError : t('submit.select_category_placeholder')}</option>
                                 {categories.map(cat => (
                                     <option key={cat.categoryId} value={cat.categoryId}>{cat.name}</option>
                                 ))}

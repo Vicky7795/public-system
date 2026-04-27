@@ -7,6 +7,10 @@ router.get('/', async (req, res) => {
         const lang = req.query.lang || 'en';
         const categories = await Category.find();
         
+        if (categories.length === 0) {
+            console.warn('⚠️ No categories found in database. Please run seedCategories.js');
+        }
+
         // Map to return only the name in requested language
         const localized = categories.map(cat => {
             const translation = cat.translations.find(t => t.language === lang) || cat.translations.find(t => t.language === 'en');
@@ -19,6 +23,7 @@ router.get('/', async (req, res) => {
         
         res.json(localized);
     } catch (err) {
+        console.error('❌ Error fetching categories:', err);
         res.status(500).json({ message: err.message });
     }
 });

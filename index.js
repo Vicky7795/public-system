@@ -1,74 +1,92 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const path = require('path');
+const http = require('http');
+
+// 1. Load environment variables FIRST
 if (process.env.NODE_ENV !== 'production') {
-    require('dotenv').config();
+    require('dotenv').config({ path: path.join(__dirname, 'server', '.env') });
 }
 
-const app = express();
+const MONGODB_URI = process.env.MONGODB_URI || process.env.DATABASE_URL;
 const PORT = process.env.PORT || 5000;
 
-// Health Check Endpoint (Version: 1.3.0)
-app.get('/health', (req, res) => {
-    res.json({
-        status: 'UP',
-        version: '1.3.0-universal',
-        database: mongoose.connection.readyState === 1 ? 'CONNECTED' : 'DISCONNECTED',
-        time: new Date().toISOString()
-    });
-});
-
-// Manual Bulletproof CORS Middleware 
-app.use((req, res, next) => {
-    const origin = req.header('Origin');
-    if (origin) {
-        res.header('Access-Control-Allow-Origin', origin);
-    } else {
-        res.header('Access-Control-Allow-Origin', '*');
-    }
-    // Satisfy Google Sign-In COOP requirements - Changed for secure popup communication
-    // Removed COOP headers tracking
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
-    res.header('Access-Control-Allow-Credentials', 'true');
-
-    if (req.method === 'OPTIONS') {
-        return res.sendStatus(200);
-    }
-    next();
-});
-
-app.use(express.json({ limit: '10mb' }));
-
-// Database connection
-const MONGODB_URI = process.env.MONGODB_URI;
-if (MONGODB_URI) {
-    // Masked log for debugging
-    const maskedUri = MONGODB_URI.substring(0, 20) + '...' + MONGODB_URI.substring(MONGODB_URI.length - 15);
-    console.log('📡 Attempting connection with URI:', maskedUri);
-
-    mongoose.connect(MONGODB_URI)
-        .then(() => console.log('✅ MongoDB connected (Universal)'))
-        .catch(err => console.error('❌ MongoDB Error:', err.message));
+if (!MONGODB_URI) {
+    console.error('❌ CRITICAL: MONGODB_URI or DATABASE_URL is not defined in environment variables.');
+    if (process.env.NODE_ENV === 'production') process.exit(1);
 }
 
-// Routes - Pointing to the 'server' folder
-app.use('/api/auth', require('./server/routes/authRoutes'));
-app.use('/api/complaints', require('./server/routes/complaintRoutes'));
-app.use('/api/departments', require('./server/routes/departmentRoutes'));
+// 2. Initialize App and Server
+const app = express();
+const server = http.createServer(app);
 
-app.get('/', (req, res) => {
-    res.send('AI Public Grievance API is running (Universal Entry Point - v1.3.0)');
-});
+// 3. Import Services (AFTER env is loaded)
+const automationService = require('./server/services/automationService');
+const socketService = require('./server/services/socketService');
 
-// Final Rescue Error Handler
-app.use((err, req, res, next) => {
-    console.error('GLOBAL ERROR:', err);
-    res.header('Access-Control-Allow-Origin', req.header('Origin') || '*');
-    res.header('Access-Control-Allow-Credentials', 'true');
-    res.status(500).json({ message: 'Internal Server Error', error: err.message });
-});
+// 4. Middlewares
+const cors = require('cors');
+app.use(cors({
+    origin: (origin, callback) => {
+        // Allow all origins in production, but we can restrict it if needed
+        callback(null, true);
+    },
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    credentials: true
+}));
+app.use(express.json({ limit: '10mb' }));
 
-app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server is running on port ${PORT}`);
-});
+// 5. Database Connection & Start Logic
+const startServer = async () => {
+    try {
+        console.log('🔄 Connecting to MongoDB:', MONGODB_URI);
+        
+        mongoose.connection.on('connected', () => console.log('✅ Mongoose connected to DB'));
+        mongoose.connection.on('error', (err) => console.error('❌ Mongoose error:', err));
+
+        await mongoose.connect(MONGODB_URI, { autoIndex: false });
+        
+        // Initialize Background Services
+        automationService.init();
+        socketService.init(server);
+
+        // Mount Routes (AFTER DB is ready)
+        app.use('/api/auth', require('./server/routes/authRoutes'));
+        app.use('/api/complaints', require('./server/routes/complaintRoutes'));
+        app.use('/api/departments', require('./server/routes/departmentRoutes'));
+        app.use('/api/categories', require('./server/routes/categoryRoutes'));
+
+        // Health Check
+        app.get('/health', (req, res) => {
+            res.json({ status: 'UP', database: mongoose.connection.readyState === 1 ? 'CONNECTED' : 'DISCONNECTED' });
+        });
+
+        // Production Serving
+        if (process.env.NODE_ENV === 'production') {
+            app.use(express.static(path.join(__dirname, 'client/dist')));
+            app.get('/*', (req, res) => {
+                if (!req.path.startsWith('/api')) res.sendFile(path.join(__dirname, 'client/dist/index.html'));
+                else res.status(404).json({ message: 'API Route Not Found' });
+            });
+        } else {
+            app.get('/', (req, res) => res.send('AI Public Grievance API is running (Universal)'));
+        }
+
+        // Global Error Handler
+        app.use((err, req, res, next) => {
+            console.error('GLOBAL ERROR:', err);
+            res.status(500).json({ message: 'Internal Server Error', error: err.message });
+        });
+
+        server.listen(PORT, '0.0.0.0', () => {
+            console.log(`🚀 Server running on port ${PORT} (Universal Entry Point)`);
+        });
+
+    } catch (err) {
+        console.error('❌ Startup Error:', err);
+        process.exit(1);
+    }
+};
+
+startServer();
