@@ -40,6 +40,7 @@ app.use(express.json({ limit: '10mb' }));
 // 5. Database Connection & Start Logic
 const startServer = async () => {
     try {
+        console.log('🚀 DEPLOYMENT SIGNATURE: v2.0-SPLAT-FIX');
         console.log('🔄 Connecting to MongoDB:', MONGODB_URI);
         
         mongoose.connection.on('connected', () => console.log('✅ Mongoose connected to DB'));
@@ -65,7 +66,7 @@ const startServer = async () => {
         // Production Serving
         if (process.env.NODE_ENV === 'production') {
             app.use(express.static(path.join(__dirname, 'client/dist')));
-            app.get('/:splat*', (req, res) => {
+            app.get('(.*)', (req, res) => {
                 if (!req.path.startsWith('/api')) res.sendFile(path.join(__dirname, 'client/dist/index.html'));
                 else res.status(404).json({ message: 'API Route Not Found' });
             });
