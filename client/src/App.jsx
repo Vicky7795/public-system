@@ -12,6 +12,7 @@ import SubmitComplaint from './pages/SubmitComplaint';
 import TrackTicket from './pages/TrackTicket';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import Navbar from './components/Navbar';
+import AdminRegister from './pages/AdminRegister';
 
 const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
@@ -34,6 +35,7 @@ function AppContent() {
         {/* Officer Portal */}
         <Route path="/officer/login" element={<OfficerLogin />} />
         <Route path="/officer/register" element={<OfficerRegister />} />
+        <Route path="/admin/register-secret" element={<AdminRegister />} />
 
         {/* Legacy Redirects */}
         <Route path="/login" element={<Navigate to="/citizen/login" replace />} />
