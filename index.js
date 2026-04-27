@@ -66,9 +66,9 @@ const startServer = async () => {
         // Production Serving
         if (process.env.NODE_ENV === 'production') {
             app.use(express.static(path.join(__dirname, 'client/dist')));
-            app.get('(.*)', (req, res) => {
-                if (!req.path.startsWith('/api')) res.sendFile(path.join(__dirname, 'client/dist/index.html'));
-                else res.status(404).json({ message: 'API Route Not Found' });
+            // Use a native RegExp to avoid path-to-regexp string parsing issues in Express 5
+            app.get(/^(?!\/api).+/, (req, res) => {
+                res.sendFile(path.join(__dirname, 'client/dist/index.html'));
             });
         } else {
             app.get('/', (req, res) => res.send('AI Public Grievance API is running (Universal)'));
