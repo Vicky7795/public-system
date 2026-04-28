@@ -889,11 +889,11 @@ router.patch('/:id/accept', auth, async (req, res) => {
     try {
         if (req.user.role !== 'Officer') return res.status(403).json({ message: 'Only officers can accept tasks' });
         const complaint = await Complaint.findOneAndUpdate(
-            { _id: req.params.id, status: { $in: ['NEW', 'ASSIGNED', 'REOPENED'] } },
-            { status: 'ASSIGNED', assignedOfficerId: req.user.id, acceptedAt: new Date() },
+            { _id: req.params.id, status: { $in: ['NEW', 'ASSIGNED', 'REOPENED', 'NEEDS_REVIEW'] } },
+            { status: 'IN_PROGRESS', assignedOfficerId: req.user.id, acceptedAt: new Date() },
             { new: true }
         );
-        if (!complaint) return res.status(404).json({ message: 'Complaint not available' });
+        if (!complaint) return res.status(404).json({ message: 'Complaint not available or already closed' });
         socketService.emitStatusUpdate(complaint);
         res.json(complaint);
     } catch (err) {
@@ -939,7 +939,7 @@ router.patch('/:id/resolve', auth, async (req, res) => {
         );
         
         // Update officer stats
-        await User.findByIdAndUpdate(req.user.id, { $inc: { activeCasesCount: -1, resolvedCount: 1 } });
+        await User.findByIdAndUpdate(req.user.id, { $inc: { resolvedCount: 1 } });
         
         socketService.emitStatusUpdate(complaint);
         res.json(complaint);
