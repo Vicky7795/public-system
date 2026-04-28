@@ -32,13 +32,21 @@ module.exports = {
     },
     emitNewComplaint: (complaint) => {
         if (io) {
-            // Emit to all admins
-            io.emit('new_complaint', complaint);
+            // Format complaint to match the required 'department' string field
+            const formattedComplaint = complaint.toObject ? complaint.toObject() : { ...complaint };
+            if (complaint.departmentId && complaint.departmentId.departmentName) {
+                formattedComplaint.department = complaint.departmentId.departmentName;
+            } else {
+                formattedComplaint.department = complaint.category;
+            }
+
+            // Emit to all admins & officers (matching the requested io.emit behavior)
+            io.emit('new_complaint', formattedComplaint);
             
-            // Emit to specific department room
+            // Legacy Emit to specific department room (keep for backward compatibility)
             if (complaint.departmentId) {
                 const deptId = typeof complaint.departmentId === 'object' ? complaint.departmentId._id : complaint.departmentId;
-                io.to(deptId.toString()).emit('new_complaint_pool', complaint);
+                io.to(deptId.toString()).emit('new_complaint_pool', formattedComplaint);
             }
         }
     },

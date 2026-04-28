@@ -30,24 +30,17 @@ const CitizenLogin = () => {
         setLoading(true);
         setError('');
         try {
-            const { data } = await api.post('/auth/login', formData);
+            const { data } = await api.post('/auth/citizen/login', formData);
             localStorage.setItem('token', data.token);
             localStorage.setItem('user', JSON.stringify(data.user));
 
-            if (data.user && data.user.role === 'Citizen') {
-                navigate('/dashboard');
-            } else if (data.user.role === 'Admin' || data.user.role === 'Officer') {
-                setError('This account is registered as an Official/Admin. Please use the Officer Portal to login.');
-                localStorage.removeItem('token');
-                localStorage.removeItem('user');
-            } else {
-                setError('Registration mismatch. Please contact system support.');
-                localStorage.removeItem('token');
-                localStorage.removeItem('user');
-            }
+            navigate('/dashboard');
         } catch (error) {
             if (!error.response) {
                 setError(t('common.auth.login_error_server'));
+            } else if (error.response.status === 403) {
+                // Officer/Admin trying to use the Citizen portal
+                setError('This account is registered as an Officer/Admin. Please use the Officer Portal to login.');
             } else {
                 setError(error.response?.data?.message || t('common.auth.login_error_failed'));
             }

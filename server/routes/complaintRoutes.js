@@ -516,6 +516,36 @@ router.get('/my', auth, async (req, res) => {
     }
 });
 
+// New Unified Route for Officer Dashboard
+router.get('/officer/complaints', auth, async (req, res) => {
+    try {
+        if (req.user.role !== 'Officer' && req.user.role !== 'Admin') {
+            return res.status(403).json({ message: 'Only authorized personnel can access the pool' });
+        }
+
+        const officerDeptId = req.user.departmentId;
+        if (!officerDeptId) return res.json([]);
+
+        // Fetch all complaints for the officer's department
+        const complaints = await Complaint.find({ departmentId: officerDeptId })
+            .populate('userId', 'name phone')
+            .populate('assignedOfficerId', 'name')
+            .populate('departmentId', 'departmentName')
+            .sort({ createdAt: -1 });
+
+        // Map them so 'department' is a string as specifically requested by the frontend
+        const mappedComplaints = complaints.map(c => {
+            const obj = c.toObject();
+            obj.department = obj.departmentId ? obj.departmentId.departmentName : obj.category;
+            return obj;
+        });
+
+        res.json(mappedComplaints);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
 router.get('/all', auth, async (req, res) => {
     try {
         if (req.user.role === 'Citizen') return res.status(403).json({ message: 'Access denied' });
@@ -777,13 +807,57 @@ router.post('/', auth, async (req, res) => {
 router.get('/track/:ticketId', async (req, res) => {
     try {
         const ticketId = req.params.ticketId.trim().toUpperCase();
-        let complaint = await Complaint.findOne({ ticketId }).populate('assignedOfficerId', 'name').populate('departmentId').select('-imageData');
+        let complaint = await Complaint.findOne({ ticketId })
+            .populate('assignedOfficerId', 'name phone email')
+            .populate('departmentId')
+            .select('-imageData');
+
         if (!complaint) return res.status(404).json({ message: 'Ticket not found' });
-        res.json(complaint);
+
+        const obj = complaint.toObject();
+
+        // Build officer contact block
+        if (obj.assignedOfficerId && obj.assignedOfficerId.phone) {
+            // Case 1: Complaint has a directly assigned officer with a phone
+            const phone = obj.assignedOfficerId.phone;
+            obj.officer = {
+                name: obj.assignedOfficerId.name,
+                phone: phone,
+                whatsapp: phone
+            };
+        } else if (obj.departmentId) {
+            // Case 2: No direct officer yet — look for any officer in the department
+            const deptOfficer = await User.findOne({
+                role: 'Officer',
+                departmentId: obj.departmentId._id
+            }).select('name phone');
+
+            if (deptOfficer && deptOfficer.phone) {
+                obj.officer = {
+                    name: deptOfficer.name,
+                    phone: deptOfficer.phone,
+                    whatsapp: deptOfficer.phone
+                };
+            } else if (obj.departmentId.contactPhone) {
+                // Case 3: Department has a contact phone stored directly
+                obj.officer = {
+                    name: obj.departmentId.contactOfficer || 'Nodal Officer',
+                    phone: obj.departmentId.contactPhone,
+                    whatsapp: obj.departmentId.contactWhatsApp || obj.departmentId.contactPhone
+                };
+            } else {
+                obj.officer = null; // UI will show fallback message
+            }
+        } else {
+            obj.officer = null;
+        }
+
+        res.json(obj);
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
 });
+
 
 router.patch('/:id', auth, async (req, res) => {
     try {

@@ -16,7 +16,14 @@ const userSchema = new mongoose.Schema({
     resolvedCount: { type: Number, default: 0 },
     overdueCount: { type: Number, default: 0 },
     escalatedCount: { type: Number, default: 0 },
-    unreadNotifications: { type: Number, default: 0 }
+    unreadNotifications: { type: Number, default: 0 },
+    // Password Reset Fields
+    resetToken: { type: String },
+    resetTokenExpiry: { type: Date },
+    // OTP Fields
+    otp: { type: String },
+    otpExpiry: { type: Date },
+    otpAttempts: { type: Number, default: 0 }
 }, { timestamps: true });
 
 module.exports = mongoose.model('User', userSchema);

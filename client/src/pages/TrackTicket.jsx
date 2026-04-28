@@ -211,34 +211,38 @@ const TrackTicket = () => {
                                 <RowItem label={t('track.location_label')} value={result.location?.address} isAddress />
                             </div>
 
-                            {/* Department Contact Card (Exact Match to Design) */}
+                            {/* Department Contact Card */}
                             <div className="bg-[#F8FAFC] border border-[#E5E7EB] rounded-[18px] p-6">
                                 <div className="flex items-center gap-2 mb-4 text-[#94A3B8]">
                                     <Phone size={14} className="stroke-[3]" />
                                     <span className="text-[10px] font-black uppercase tracking-[0.15em]">{t('track.dept_contact_label')}</span>
                                 </div>
-                                {dept?.contactPhone ? (
+
+                                {result.officer ? (
                                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                                         <div>
-                                            <p className="font-bold text-[#1E293B] text-[15px] leading-tight">{dept.contactOfficer || 'Nodal Officer'}</p>
-                                            <p className="text-[12px] text-[#64748B] font-medium mt-0.5">{dept.departmentName}</p>
+                                            <p className="font-bold text-[#1E293B] text-[15px] leading-tight">{result.officer.name}</p>
+                                            <p className="text-[12px] text-[#64748B] font-medium mt-0.5">
+                                                {dept?.departmentName || result.category || 'Department Officer'}
+                                            </p>
+                                            <p className="text-[12px] text-[#2563EB] font-semibold mt-1">{result.officer.phone}</p>
                                         </div>
                                         <div className="flex items-center gap-3">
-                                            <a 
-                                                href={`tel:${dept.contactPhone?.replace(/\s+/g, '')}`}
+                                            <a
+                                                href={`tel:${result.officer.phone?.replace(/\s+/g, '')}`}
                                                 onClick={(e) => {
                                                     if (!/Mobi|Android|iPhone/i.test(navigator.userAgent)) {
                                                         e.preventDefault();
-                                                        alert(`Support: ${dept.contactPhone}\n(Please use a mobile device to call directly)`);
+                                                        alert(`Officer Contact: ${result.officer.phone}\n(Please use a mobile device to call directly)`);
                                                     }
                                                 }}
                                                 className="flex items-center gap-2 bg-[#2563EB] text-white px-5 py-2.5 rounded-[12px] font-bold text-[13px] hover:bg-blue-700 transition-all active:scale-95 shadow-sm shadow-blue-100"
                                             >
                                                 <Phone size={14} className="stroke-[3]" /> {t('track.call_now')}
                                             </a>
-                                            {dept.contactWhatsApp && (
-                                                <button 
-                                                    onClick={() => handleWhatsApp(dept.contactWhatsApp)}
+                                            {result.officer.whatsapp && (
+                                                <button
+                                                    onClick={() => handleWhatsApp(result.officer.whatsapp)}
                                                     className="flex items-center gap-2 bg-[#059669] text-white px-5 py-2.5 rounded-[12px] font-bold text-[13px] hover:bg-emerald-700 transition-all active:scale-95 shadow-sm shadow-emerald-100"
                                                 >
                                                     <MessageSquare size={14} className="stroke-[3]" /> WhatsApp
@@ -247,7 +251,10 @@ const TrackTicket = () => {
                                         </div>
                                     </div>
                                 ) : (
-                                    <p className="text-xs text-[#94A3B8] font-medium italic">{t('track.no_contact')}</p>
+                                    <div className="flex items-center gap-3 text-amber-600 bg-amber-50 border border-amber-100 rounded-xl px-4 py-3">
+                                        <Clock size={16} />
+                                        <p className="text-sm font-semibold">Officer will be assigned soon. Please check back later.</p>
+                                    </div>
                                 )}
                             </div>
 

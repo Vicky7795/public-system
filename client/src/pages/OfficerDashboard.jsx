@@ -46,21 +46,22 @@ const OfficerDashboard = () => {
     const fetchData = async () => {
         try {
             setFetchError('');
-            const [mineRes, poolRes] = await Promise.all([
-                api.get('/complaints/assigned'),
-                api.get('/complaints/unassigned')
-            ]);
+            const res = await api.get('/complaints/officer/complaints');
+            
+            const myId = user._id || user.id;
+            const assigned = res.data.filter(c => c.assignedOfficerId?._id === myId || c.assignedOfficerId === myId);
+            const unassigned = res.data.filter(c => !c.assignedOfficerId);
 
-            setComplaints(mineRes.data);
-            setPool(poolRes.data);
+            setComplaints(assigned);
+            setPool(unassigned);
 
             const now = new Date();
             setStats({
-                total: mineRes.data.length,
-                overdue: mineRes.data.filter(c => !['RESOLVED'].includes(c.status) && new Date(c.slaDeadline) < now).length,
-                inProgress: mineRes.data.filter(c => ['NEW', 'ASSIGNED', 'IN_PROGRESS', 'ESCALATED'].includes(c.status)).length,
-                resolved: mineRes.data.filter(c => ['RESOLVED'].includes(c.status)).length,
-                poolCount: poolRes.data.length
+                total: assigned.length,
+                overdue: assigned.filter(c => !['RESOLVED'].includes(c.status) && new Date(c.slaDeadline) < now).length,
+                inProgress: assigned.filter(c => ['NEW', 'ASSIGNED', 'IN_PROGRESS', 'ESCALATED'].includes(c.status)).length,
+                resolved: assigned.filter(c => ['RESOLVED'].includes(c.status)).length,
+                poolCount: unassigned.length
             });
         } catch (err) {
             setFetchError(err.response?.data?.message || 'Could not sync with central server.');
@@ -78,37 +79,27 @@ const OfficerDashboard = () => {
 
     // Socket.io for real-time updates
     useEffect(() => {
-        if (!user?.departmentId) return;
+        if (!user?.department) return;
         
         socket.connect();
-        
-        const deptId = typeof user.departmentId === 'object' ? user.departmentId._id : user.departmentId;
-        socket.emit('join_department', deptId);
 
-        socket.on('new_complaint_pool', (newComplaint) => {
-            setPool(prev => [newComplaint, ...prev]);
-            setStats(s => ({ ...s, poolCount: s.poolCount + 1 }));
-        });
-
-        socket.on('status_update', (updatedComplaint) => {
-            // Update in mine
-            setComplaints(prev => prev.map(c => c._id === updatedComplaint._id ? updatedComplaint : c));
-            // Update in pool (if it was moved back or something)
-            setPool(prev => prev.map(c => c._id === updatedComplaint._id ? updatedComplaint : c));
-            
-            // Recalculate stats briefly (or just refresh if complex)
-            if (updatedComplaint.assignedOfficerId === user._id || updatedComplaint.assignedOfficerId?._id === user._id) {
-                // It's mine, might need a refresh of stats
-                fetchData();
+        socket.on('new_complaint', (data) => {
+            if (data.department === user.department) {
+                setPool(prev => [data, ...prev]);
+                setStats(s => ({ ...s, poolCount: s.poolCount + 1 }));
             }
         });
 
+        socket.on('status_update', (updatedComplaint) => {
+            fetchData();
+        });
+
         return () => {
-            socket.off('new_complaint_pool');
+            socket.off('new_complaint');
             socket.off('status_update');
             socket.disconnect();
         };
-    }, [user?.departmentId]);
+    }, [user?.department]);
 
     useEffect(() => {
         const handler = setTimeout(() => setDebouncedSearch(searchTerm), 300);

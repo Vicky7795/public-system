@@ -2,10 +2,23 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
+const nodemailer = require('nodemailer');
 const { OAuth2Client } = require('google-auth-library');
 const User = require('../models/User');
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+// Nodemailer transporter (Gmail SMTP)
+const createTransporter = () => {
+    return nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+            user: process.env.EMAIL_USER,
+            pass: process.env.EMAIL_PASS
+        }
+    });
+};
 
 // Register
 router.post('/register', async (req, res) => {
@@ -62,10 +75,10 @@ router.post('/register', async (req, res) => {
     }
 });
 
-// Login
-router.post('/login', async (req, res) => {
+// Citizen Login
+router.post('/citizen/login', async (req, res) => {
     try {
-        console.log('[DEBUG] Login request received:', req.body);
+        console.log('[DEBUG] Citizen Login request received:', req.body);
         const { email, password } = req.body;
 
         const normalizedEmail = email.toLowerCase().trim();
@@ -74,6 +87,10 @@ router.post('/login', async (req, res) => {
         if (!user) {
             return res.status(400).json({ message: 'Invalid credentials' });
         }
+        
+        if (user.role !== 'Citizen') {
+            return res.status(403).json({ message: 'Access Denied: Please use the Officer portal.' });
+        }
 
         const isMatch = bcrypt.compareSync(password, user.password);
         if (!isMatch) return res.status(400).json({ message: 'Invalid credentials' });
@@ -81,7 +98,47 @@ router.post('/login', async (req, res) => {
         const token = jwt.sign({ id: user._id, role: user.role, departmentId: user.departmentId }, process.env.JWT_SECRET);
         res.json({ token, user: { id: user._id, name: user.name, role: user.role, departmentId: user.departmentId } });
     } catch (err) {
-        console.error('[LOGIN ERROR]:', err);
+        console.error('[CITIZEN LOGIN ERROR]:', err);
+        res.status(500).json({ message: err.message });
+    }
+});
+
+// Officer/Admin Login
+router.post('/officer/login', async (req, res) => {
+    try {
+        console.log('[DEBUG] Officer Login request received:', req.body);
+        const { email, password } = req.body;
+
+        const normalizedEmail = email.toLowerCase().trim();
+
+        const user = await User.findOne({ email: normalizedEmail }).populate('departmentId');
+        if (!user) {
+            return res.status(400).json({ message: 'Invalid credentials' });
+        }
+        
+        if (user.role !== 'Officer' && user.role !== 'Admin') {
+            return res.status(403).json({ message: 'Access Denied: Please use the Citizen portal.' });
+        }
+
+        const isMatch = bcrypt.compareSync(password, user.password);
+        if (!isMatch) return res.status(400).json({ message: 'Invalid credentials' });
+
+        const deptId = user.departmentId ? user.departmentId._id : null;
+        const deptName = user.departmentId ? user.departmentId.departmentName : null;
+
+        const token = jwt.sign({ id: user._id, role: user.role, departmentId: deptId }, process.env.JWT_SECRET);
+        res.json({ 
+            token, 
+            user: { 
+                id: user._id, 
+                name: user.name, 
+                role: user.role, 
+                departmentId: deptId,
+                department: deptName 
+            } 
+        });
+    } catch (err) {
+        console.error('[OFFICER LOGIN ERROR]:', err);
         res.status(500).json({ message: err.message });
     }
 
@@ -145,30 +202,6 @@ router.delete('/officers/:id', async (req, res) => {
     }
 });
 
-// Reset Password (Verify by Email + Phone)
-router.post('/reset-password', async (req, res) => {
-    try {
-        const { email, phone, newPassword } = req.body;
-        const normalizedEmail = email.toLowerCase().trim();
-
-        const normalizedPhone = phone?.toString().trim();
-        if (!normalizedPhone) return res.status(400).json({ message: 'Phone number is required' });
-
-        // 1. Verify user exists with this email and phone
-        const user = await User.findOne({ email: normalizedEmail, phone: normalizedPhone });
-        if (!user) {
-            return res.status(404).json({ message: 'User not found with these details.' });
-        }
-
-        // 2. Hash and Save new password
-        user.password = bcrypt.hashSync(newPassword, 10);
-        await user.save();
-
-        res.json({ message: 'Password reset successful. You can now login.' });
-    } catch (err) {
-        res.status(500).json({ message: err.message });
-    }
-});
 
 // Google Sign-In
 router.post('/google', async (req, res) => {
@@ -199,6 +232,10 @@ router.post('/google', async (req, res) => {
             // Link Google ID to existing account
             user.googleId = googleId;
             await user.save();
+        }
+
+        if (user.role !== 'Citizen') {
+            return res.status(403).json({ message: 'Access Denied: Please use the Officer portal.' });
         }
 
         const token = jwt.sign(
@@ -237,6 +274,216 @@ router.post('/notifications/read-all', auth, async (req, res) => {
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ message: err.message });
+    }
+});
+
+// ─────────────────────────────────────────────
+// Send OTP – Officer / Admin Forgot Password
+// ─────────────────────────────────────────────
+router.post('/send-otp', async (req, res) => {
+    try {
+        const { email } = req.body;
+        if (!email) return res.status(400).json({ message: 'Email is required' });
+
+        const user = await User.findOne({ email: email.toLowerCase().trim() });
+
+        if (!user || !['Officer', 'Admin'].includes(user.role)) {
+            return res.status(404).json({ message: 'No Officer or Admin account found with this email.' });
+        }
+
+        // Generate 6-digit OTP
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        const otpExpiry = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+
+        user.otp = otp;
+        user.otpExpiry = otpExpiry;
+        user.otpAttempts = 0;
+        await user.save();
+
+        // Send OTP via email if configured
+        let emailSent = false;
+        if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+            try {
+                const transporter = createTransporter();
+                await transporter.sendMail({
+                    from: `"Duty Desk Entry Portal" <${process.env.EMAIL_USER}>`,
+                    to: user.email,
+                    subject: `Your OTP: ${otp} – Duty Desk Entry Portal`,
+                    html: `
+                        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                            <div style="background: #0D47A1; padding: 24px; text-align: center;">
+                                <h2 style="color: white; margin: 0;">Duty Desk Entry Portal</h2>
+                                <p style="color: #90CAF9; margin: 4px 0 0;">Government of India</p>
+                            </div>
+                            <div style="padding: 32px; background: #f9fafb; border: 1px solid #e5e7eb;">
+                                <h3 style="color: #1e293b;">Password Reset OTP</h3>
+                                <p style="color: #475569;">Hello <strong>${user.name}</strong>,</p>
+                                <p style="color: #475569;">Your One-Time Password (OTP) for password reset is:</p>
+                                <div style="text-align: center; margin: 24px 0;">
+                                    <span style="font-size: 36px; font-weight: bold; letter-spacing: 12px; color: #0D47A1; background: #EFF6FF; padding: 16px 24px; border-radius: 8px; border: 2px dashed #93C5FD;">${otp}</span>
+                                </div>
+                                <p style="color: #94a3b8; font-size: 13px;">This OTP is valid for <strong>5 minutes</strong>. Do not share it with anyone.</p>
+                            </div>
+                        </div>
+                    `
+                });
+                emailSent = true;
+            } catch (emailErr) {
+                console.error('[OTP EMAIL ERROR]:', emailErr.message);
+            }
+        }
+
+        res.json({
+            message: emailSent ? 'OTP sent to your registered email.' : 'OTP generated.',
+            demoOtp: otp  // shown on screen for demo – remove in production
+        });
+
+    } catch (err) {
+        console.error('[SEND OTP ERROR]:', err);
+        res.status(500).json({ message: 'Failed to generate OTP. Please try again.' });
+    }
+});
+
+// ─────────────────────────────────────────────
+// Verify OTP – Officer / Admin
+// ─────────────────────────────────────────────
+router.post('/verify-otp', async (req, res) => {
+    try {
+        const { email, otp } = req.body;
+        if (!email || !otp) return res.status(400).json({ message: 'Email and OTP are required' });
+
+        const user = await User.findOne({ email: email.toLowerCase().trim() });
+        if (!user || !['Officer', 'Admin'].includes(user.role)) {
+            return res.status(404).json({ message: 'Account not found.' });
+        }
+
+        // Max 3 attempts
+        if (user.otpAttempts >= 3) {
+            user.otp = undefined; user.otpExpiry = undefined; user.otpAttempts = 0;
+            await user.save();
+            return res.status(429).json({ message: 'Too many attempts. Please request a new OTP.' });
+        }
+
+        // Check expiry
+        if (!user.otp || !user.otpExpiry || new Date() > user.otpExpiry) {
+            return res.status(400).json({ message: 'OTP has expired. Please request a new one.' });
+        }
+
+        // Check match
+        if (user.otp !== otp.toString().trim()) {
+            user.otpAttempts = (user.otpAttempts || 0) + 1;
+            await user.save();
+            const remaining = 3 - user.otpAttempts;
+            return res.status(400).json({ message: `Incorrect OTP. ${remaining} attempt(s) remaining.` });
+        }
+
+        // OTP valid — issue a short-lived reset token
+        const resetToken = crypto.randomBytes(32).toString('hex');
+        user.resetToken = resetToken;
+        user.resetTokenExpiry = new Date(Date.now() + 10 * 60 * 1000);
+        user.otp = undefined; user.otpExpiry = undefined; user.otpAttempts = 0;
+        await user.save();
+
+        res.json({ message: 'OTP verified successfully.', resetToken });
+
+    } catch (err) {
+        console.error('[VERIFY OTP ERROR]:', err);
+        res.status(500).json({ message: 'Verification failed. Please try again.' });
+    }
+});
+
+// ─────────────────────────────────────────────
+// Forgot Password – Officer / Admin
+// ─────────────────────────────────────────────
+router.post('/forgot-password', async (req, res) => {
+    try {
+        const { email } = req.body;
+        if (!email) return res.status(400).json({ message: 'Email is required' });
+
+        const user = await User.findOne({ email: email.toLowerCase().trim() });
+
+        // Security: always respond success to not reveal if email exists
+        if (!user || !['Officer', 'Admin'].includes(user.role)) {
+            return res.json({ message: 'If this email is registered, a reset link has been sent.' });
+        }
+
+        // Generate secure token
+        const token = crypto.randomBytes(32).toString('hex');
+        const expiry = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
+
+        user.resetToken = token;
+        user.resetTokenExpiry = expiry;
+        await user.save();
+
+        // Build reset URL
+        const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+        const resetUrl = `${clientUrl}/officer/reset-password?token=${token}`;
+
+        // Send email
+        if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+            const transporter = createTransporter();
+            await transporter.sendMail({
+                from: `"Duty Desk Entry Portal" <${process.env.EMAIL_USER}>`,
+                to: user.email,
+                subject: 'Password Reset Request – Duty Desk Entry Portal',
+                html: `
+                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                        <div style="background: #0D47A1; padding: 24px; text-align: center;">
+                            <h2 style="color: white; margin: 0;">Duty Desk Entry Portal</h2>
+                            <p style="color: #90CAF9; margin: 4px 0 0;">Government of India</p>
+                        </div>
+                        <div style="padding: 32px; background: #f9fafb; border: 1px solid #e5e7eb;">
+                            <h3 style="color: #1e293b;">Password Reset Request</h3>
+                            <p style="color: #475569;">Hello <strong>${user.name}</strong>,</p>
+                            <p style="color: #475569;">You requested a password reset for your ${user.role} account. Click the button below to reset your password. This link is valid for <strong>30 minutes</strong>.</p>
+                            <div style="text-align: center; margin: 32px 0;">
+                                <a href="${resetUrl}" style="background: #0D47A1; color: white; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 15px;">Reset Password</a>
+                            </div>
+                            <p style="color: #94a3b8; font-size: 13px;">If you did not request this, please ignore this email. Your password will remain unchanged.</p>
+                            <p style="color: #94a3b8; font-size: 12px; margin-top: 24px; border-top: 1px solid #e2e8f0; padding-top: 16px;">This is an automated message. Do not reply to this email.</p>
+                        </div>
+                    </div>
+                `
+            });
+        } else {
+            // Dev fallback: log the token to server console
+            console.log(`\n[DEV PASSWORD RESET]\nUser: ${user.email}\nReset URL: ${resetUrl}\n`);
+        }
+
+        res.json({ message: 'If this email is registered, a reset link has been sent.' });
+    } catch (err) {
+        console.error('[FORGOT PASSWORD ERROR]:', err);
+        res.status(500).json({ message: 'Failed to send reset email. Please try again.' });
+    }
+});
+
+// ─────────────────────────────────────────────
+// Reset Password – Officer / Admin
+// ─────────────────────────────────────────────
+router.post('/reset-password', async (req, res) => {
+    try {
+        const { token, newPassword } = req.body;
+        if (!token || !newPassword) return res.status(400).json({ message: 'Token and new password are required' });
+        if (newPassword.length < 6) return res.status(400).json({ message: 'Password must be at least 6 characters' });
+
+        const user = await User.findOne({
+            resetToken: token,
+            resetTokenExpiry: { $gt: new Date() } // not expired
+        });
+
+        if (!user) return res.status(400).json({ message: 'Reset link is invalid or has expired. Please request a new one.' });
+
+        // Hash and save new password
+        const hashedPassword = await bcrypt.hash(newPassword, 12);
+        user.password = hashedPassword;
+        user.resetToken = undefined;
+        user.resetTokenExpiry = undefined;
+        await user.save();
+
+        res.json({ message: 'Password reset successfully. You can now login with your new password.' });
+    } catch (err) {
+        console.error('[RESET PASSWORD ERROR]:', err);
+        res.status(500).json({ message: 'Failed to reset password. Please try again.' });
     }
 });
 

@@ -3,8 +3,9 @@ import LandingPage from './pages/LandingPage';
 import CitizenLogin from './pages/CitizenLogin';
 import CitizenRegister from './pages/CitizenRegister';
 import CitizenForgotPassword from './pages/CitizenForgotPassword';
-import OfficerLogin from './pages/OfficerLogin';
-import OfficerRegister from './pages/OfficerRegister';
+import OfficerPortal from './pages/OfficerPortal';
+import OfficerForgotPassword from './pages/OfficerForgotPassword';
+import OfficerResetPassword from './pages/OfficerResetPassword';
 import CitizenDashboard from './pages/CitizenDashboard';
 import AdminDashboard from './pages/AdminDashboard';
 import OfficerDashboard from './pages/OfficerDashboard';
@@ -17,7 +18,7 @@ const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
 function AppContent() {
   const location = useLocation();
-  const hideNavbarPaths = ['/citizen/login', '/citizen/register', '/citizen/forgot-password'];
+  const hideNavbarPaths = ['/citizen/login', '/citizen/register', '/citizen/forgot-password', '/officer/login', '/officer/register', '/officer/forgot-password', '/officer/reset-password'];
   const shouldHideNavbar = hideNavbarPaths.includes(location.pathname);
 
   return (
@@ -31,9 +32,11 @@ function AppContent() {
         <Route path="/citizen/register" element={<CitizenRegister />} />
         <Route path="/citizen/forgot-password" element={<CitizenForgotPassword />} />
 
-        {/* Officer Portal */}
-        <Route path="/officer/login" element={<OfficerLogin />} />
-        <Route path="/officer/register" element={<OfficerRegister />} />
+        {/* Officer Portal (Unified) */}
+        <Route path="/officer/login" element={<OfficerPortal />} />
+        <Route path="/officer/register" element={<OfficerPortal />} />
+        <Route path="/officer/forgot-password" element={<OfficerForgotPassword />} />
+        <Route path="/officer/reset-password" element={<OfficerResetPassword />} />
 
         {/* Legacy Redirects */}
         <Route path="/login" element={<Navigate to="/citizen/login" replace />} />
