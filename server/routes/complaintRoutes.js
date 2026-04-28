@@ -816,37 +816,49 @@ router.get('/track/:ticketId', async (req, res) => {
 
         const obj = complaint.toObject();
 
-        // Build officer contact block
+        // Normalize phone to E.164 (+91XXXXXXXXXX) for WhatsApp compatibility
+        const formatPhone = (phone) => {
+            if (!phone) return null;
+            const digits = phone.replace(/[^0-9]/g, '');
+            if (digits.length === 10) return '+91' + digits;
+            if (digits.length === 12 && digits.startsWith('91')) return '+' + digits;
+            return phone; // already formatted
+        };
+
+        // Build officer contact block (3-tier fallback)
         if (obj.assignedOfficerId && obj.assignedOfficerId.phone) {
-            // Case 1: Complaint has a directly assigned officer with a phone
-            const phone = obj.assignedOfficerId.phone;
+            // Case 1: Directly assigned officer has a phone
+            const phone = formatPhone(obj.assignedOfficerId.phone);
             obj.officer = {
                 name: obj.assignedOfficerId.name,
                 phone: phone,
                 whatsapp: phone
             };
         } else if (obj.departmentId) {
-            // Case 2: No direct officer yet — look for any officer in the department
+            // Case 2: Look for any officer registered in this department
             const deptOfficer = await User.findOne({
                 role: 'Officer',
-                departmentId: obj.departmentId._id
+                departmentId: obj.departmentId._id,
+                status: 'Active'
             }).select('name phone');
 
             if (deptOfficer && deptOfficer.phone) {
+                const phone = formatPhone(deptOfficer.phone);
                 obj.officer = {
                     name: deptOfficer.name,
-                    phone: deptOfficer.phone,
-                    whatsapp: deptOfficer.phone
+                    phone: phone,
+                    whatsapp: phone
                 };
             } else if (obj.departmentId.contactPhone) {
-                // Case 3: Department has a contact phone stored directly
+                // Case 3: Department has a hardcoded contact phone
+                const phone = formatPhone(obj.departmentId.contactPhone);
                 obj.officer = {
                     name: obj.departmentId.contactOfficer || 'Nodal Officer',
-                    phone: obj.departmentId.contactPhone,
-                    whatsapp: obj.departmentId.contactWhatsApp || obj.departmentId.contactPhone
+                    phone: phone,
+                    whatsapp: formatPhone(obj.departmentId.contactWhatsApp) || phone
                 };
             } else {
-                obj.officer = null; // UI will show fallback message
+                obj.officer = null;
             }
         } else {
             obj.officer = null;
