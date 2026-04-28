@@ -48,21 +48,20 @@ router.get('/:id', async (req, res) => {
     const rawId = req.params.id;
     try {
         const cleanId = rawId.split(':')[0].trim();
-        console.log(`[GET] Department Request - Raw: "${rawId}", Clean: "${cleanId}"`);
-        
+        const mongoose = require('mongoose');
+
+        if (!mongoose.isValidObjectId(cleanId)) {
+            return res.status(400).json({ message: 'Invalid department ID format.' });
+        }
+
         const department = await Department.findById(cleanId);
         if (!department) {
-            console.warn(`[GET] Department NOT FOUND: ${cleanId}`);
-            return res.status(404).json({ message: 'Department not found' });
+            return res.status(404).json({ message: 'Department not found.' });
         }
         res.json(department);
     } catch (err) {
         console.error(`[GET] Department Error:`, err.message);
-        res.status(400).json({ 
-            message: 'Invalid ID or Processing Error', 
-            receivedId: rawId,
-            error: err.message 
-        });
+        res.status(500).json({ message: 'Server error fetching department.' });
     }
 });
 
