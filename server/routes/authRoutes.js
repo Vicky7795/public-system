@@ -155,11 +155,13 @@ router.get('/officers', async (req, res) => {
     }
 });
 
-// Get Single Officer
+// Get Single Officer (or Admin)
 router.get('/officers/:id', async (req, res) => {
     try {
-        const officer = await User.findOne({ _id: req.params.id, role: 'Officer' })
-            .populate('departmentId', 'departmentName');
+        const officer = await User.findOne({
+            _id: req.params.id,
+            role: { $in: ['Officer', 'Admin'] }
+        }).populate('departmentId', 'departmentName');
         if (!officer) return res.status(404).json({ message: 'Officer not found' });
         res.json(officer);
     } catch (err) {
