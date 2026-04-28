@@ -111,8 +111,15 @@ const OfficerDashboard = () => {
             await api.patch(`/complaints/${id}/accept`);
             await fetchData();
             setView('mine');
-        } catch {
-            setFetchError('Assignment failed.');
+        } catch (err) {
+            if (err?.response?.status === 404) {
+                // Complaint was deleted or no longer exists — refresh the list
+                setFetchError('This complaint no longer exists. Refreshing list...');
+                await fetchData();
+                setTimeout(() => setFetchError(''), 3000);
+            } else {
+                setFetchError('Assignment failed. Please try again.');
+            }
         }
     };
 
