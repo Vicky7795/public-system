@@ -14,7 +14,7 @@ import android.content.Context;
 
 public class MainActivity extends AppCompatActivity {
     private WebView webView;
-    private final String APP_URL = "http://172.23.250.5:3000"; // Local network IP for testing on physical phone
+    private final String APP_URL = "https://ai-public-grievance-portal.onrender.com"; // Production URL
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
