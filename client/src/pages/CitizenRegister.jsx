@@ -233,6 +233,7 @@ const CitizenRegister = () => {
                                     shape="pill"
                                     text="signup_with"
                                     width="350"
+                                    ux_mode="redirect"
                                 />
                             </div>
                         </form>
