@@ -8,6 +8,7 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Bundle;
+import android.webkit.CookieManager;
 import android.webkit.GeolocationPermissions;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
@@ -51,6 +52,11 @@ public class MainActivity extends AppCompatActivity {
         webSettings.setJavaScriptCanOpenWindowsAutomatically(true);
         webSettings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
 
+        // Enable Cookies (Important for Auth)
+        CookieManager cookieManager = CookieManager.getInstance();
+        cookieManager.setAcceptCookie(true);
+        cookieManager.setAcceptThirdPartyCookies(webView, true);
+
         // Spoof User-Agent to bypass Google OAuth WebView block
         String userAgent = webSettings.getUserAgentString();
         userAgent = userAgent.replace("; wv", "");
@@ -70,15 +76,9 @@ public class MainActivity extends AppCompatActivity {
             public boolean onCreateWindow(WebView view, boolean isDialog, boolean isUserGesture, android.os.Message resultMsg) {
                 WebView newWebView = new WebView(MainActivity.this);
                 newWebView.getSettings().setJavaScriptEnabled(true);
-                newWebView.getSettings().setSupportZoom(true);
-                newWebView.getSettings().setBuiltInZoomControls(true);
-                newWebView.getSettings().setPluginState(WebSettings.PluginState.ON);
                 newWebView.getSettings().setSupportMultipleWindows(true);
-                view.addView(newWebView);
-                WebView.WebViewTransport transport = (WebView.WebViewTransport) resultMsg.obj;
-                transport.setWebView(newWebView);
-                resultMsg.sendToTarget();
-
+                newWebView.getSettings().setJavaScriptCanOpenWindowsAutomatically(true);
+                
                 newWebView.setWebViewClient(new WebViewClient() {
                     @Override
                     public boolean shouldOverrideUrlLoading(WebView view, String url) {
@@ -86,6 +86,10 @@ public class MainActivity extends AppCompatActivity {
                         return true;
                     }
                 });
+
+                WebView.WebViewTransport transport = (WebView.WebViewTransport) resultMsg.obj;
+                transport.setWebView(newWebView);
+                resultMsg.sendToTarget();
                 return true;
             }
 
@@ -112,6 +116,15 @@ public class MainActivity extends AppCompatActivity {
         });
 
         webView.setWebViewClient(new WebViewClient() {
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                String url = request.getUrl().toString();
+                if (url.contains("accounts.google.com")) {
+                    return false; // Let the WebView handle Google accounts
+                }
+                return false;
+            }
+
             @Override
             public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
                 if (request.isForMainFrame()) {
