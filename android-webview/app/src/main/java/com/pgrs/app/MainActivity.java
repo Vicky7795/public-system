@@ -29,6 +29,11 @@ public class MainActivity extends AppCompatActivity {
         webSettings.setAllowFileAccess(true);
         webSettings.setMixedContentMode(android.webkit.WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
 
+        // Spoof User-Agent to bypass Google OAuth WebView block
+        String userAgent = webSettings.getUserAgentString();
+        userAgent = userAgent.replace("; wv", "");
+        webSettings.setUserAgentString(userAgent);
+
         webView.setWebChromeClient(new android.webkit.WebChromeClient() {
             @Override
             public boolean onConsoleMessage(android.webkit.ConsoleMessage consoleMessage) {
