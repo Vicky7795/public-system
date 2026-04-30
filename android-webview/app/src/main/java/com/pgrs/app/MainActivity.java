@@ -77,11 +77,22 @@ public class MainActivity extends AppCompatActivity {
                 newWebView.getSettings().setSupportMultipleWindows(true);
                 newWebView.getSettings().setJavaScriptCanOpenWindowsAutomatically(true);
                 
+                // Ensure popup also uses the standard User-Agent
+                newWebView.getSettings().setUserAgentString("Mozilla/5.0 (Linux; Android 13; SM-G981B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Mobile Safari/537.36");
+
+                newWebView.setLayoutParams(new android.widget.RelativeLayout.LayoutParams(
+                        android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+                        android.view.ViewGroup.LayoutParams.MATCH_PARENT));
+                
+                android.widget.RelativeLayout mainLayout = findViewById(R.id.main_layout);
+                mainLayout.addView(newWebView);
+
+                newWebView.setWebChromeClient(this); 
+                
                 newWebView.setWebViewClient(new WebViewClient() {
                     @Override
                     public boolean shouldOverrideUrlLoading(WebView view, String url) {
-                        webView.loadUrl(url);
-                        return true;
+                        return false; 
                     }
                 });
 
@@ -89,6 +100,13 @@ public class MainActivity extends AppCompatActivity {
                 transport.setWebView(newWebView);
                 resultMsg.sendToTarget();
                 return true;
+            }
+
+            @Override
+            public void onCloseWindow(WebView window) {
+                super.onCloseWindow(window);
+                android.widget.RelativeLayout mainLayout = findViewById(R.id.main_layout);
+                mainLayout.removeView(window);
             }
 
             // Handle Geolocation
