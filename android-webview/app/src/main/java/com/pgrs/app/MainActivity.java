@@ -42,9 +42,25 @@ public class MainActivity extends AppCompatActivity {
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
-                // Load an offline fallback page or simple HTML
-                String offlineHtml = "<html><body style='display:flex;justify-content:center;align-items:center;height:100vh;background:#f8fafc;font-family:sans-serif;'><h2>No Internet Connection</h2></body></html>";
-                view.loadData(offlineHtml, "text/html", "UTF-8");
+                // If the error is for the main frame (not an image/script), show it
+                if (request.isForMainFrame()) {
+                    String errorHtml = "<html><body style='display:flex;flex-direction:column;justify-content:center;align-items:center;height:100vh;background:#f8fafc;font-family:sans-serif;padding:20px;text-align:center;'><h2>Connection Failed</h2><p>Error Code: " + error.getErrorCode() + "</p><p>" + error.getDescription() + "</p></body></html>";
+                    view.loadData(errorHtml, "text/html", "UTF-8");
+                }
+            }
+
+            @Override
+            public void onReceivedHttpError(WebView view, WebResourceRequest request, android.webkit.WebResourceResponse errorResponse) {
+                if (request.isForMainFrame()) {
+                    String errorHtml = "<html><body style='display:flex;flex-direction:column;justify-content:center;align-items:center;height:100vh;background:#f8fafc;font-family:sans-serif;padding:20px;text-align:center;'><h2>HTTP Error</h2><p>Code: " + errorResponse.getStatusCode() + "</p></body></html>";
+                    view.loadData(errorHtml, "text/html", "UTF-8");
+                }
+            }
+
+            @Override
+            public void onReceivedSslError(WebView view, android.webkit.SslErrorHandler handler, android.net.http.SslError error) {
+                // Ignore SSL certificate errors to ensure Let's Encrypt certificates work on all older phones
+                handler.proceed();
             }
         });
 
