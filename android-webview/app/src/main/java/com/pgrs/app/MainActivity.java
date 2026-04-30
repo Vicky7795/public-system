@@ -47,6 +47,8 @@ public class MainActivity extends AppCompatActivity {
         webSettings.setAllowFileAccess(true);
         webSettings.setGeolocationEnabled(true);
         webSettings.setDatabaseEnabled(true);
+        webSettings.setSupportMultipleWindows(true);
+        webSettings.setJavaScriptCanOpenWindowsAutomatically(true);
         webSettings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
 
         // Spoof User-Agent to bypass Google OAuth WebView block
@@ -61,6 +63,30 @@ public class MainActivity extends AppCompatActivity {
                         + consoleMessage.lineNumber() + " of "
                         + consoleMessage.sourceId());
                 return super.onConsoleMessage(consoleMessage);
+            }
+
+            // Handle Popups (Google Login often uses popups)
+            @Override
+            public boolean onCreateWindow(WebView view, boolean isDialog, boolean isUserGesture, android.os.Message resultMsg) {
+                WebView newWebView = new WebView(MainActivity.this);
+                newWebView.getSettings().setJavaScriptEnabled(true);
+                newWebView.getSettings().setSupportZoom(true);
+                newWebView.getSettings().setBuiltInZoomControls(true);
+                newWebView.getSettings().setPluginState(WebSettings.PluginState.ON);
+                newWebView.getSettings().setSupportMultipleWindows(true);
+                view.addView(newWebView);
+                WebView.WebViewTransport transport = (WebView.WebViewTransport) resultMsg.obj;
+                transport.setWebView(newWebView);
+                resultMsg.sendToTarget();
+
+                newWebView.setWebViewClient(new WebViewClient() {
+                    @Override
+                    public boolean shouldOverrideUrlLoading(WebView view, String url) {
+                        webView.loadUrl(url);
+                        return true;
+                    }
+                });
+                return true;
             }
 
             // Handle Geolocation
