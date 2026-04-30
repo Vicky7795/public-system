@@ -234,7 +234,6 @@ const CitizenLogin = () => {
                                     shape="pill"
                                     text="signin_with"
                                     width="350"
-                                    ux_mode="redirect"
                                 />
                             </div>
                         </form>
