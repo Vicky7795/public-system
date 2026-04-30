@@ -57,10 +57,8 @@ public class MainActivity extends AppCompatActivity {
         cookieManager.setAcceptCookie(true);
         cookieManager.setAcceptThirdPartyCookies(webView, true);
 
-        // Spoof User-Agent to bypass Google OAuth WebView block
-        String userAgent = webSettings.getUserAgentString();
-        userAgent = userAgent.replace("; wv", "");
-        webSettings.setUserAgentString(userAgent);
+        // Use a standard Chrome Mobile User-Agent to ensure Google OAuth compatibility
+        webSettings.setUserAgentString("Mozilla/5.0 (Linux; Android 13; SM-G981B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Mobile Safari/537.36");
 
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
