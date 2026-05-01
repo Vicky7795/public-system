@@ -9,6 +9,7 @@ import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Bundle;
 import android.webkit.CookieManager;
+import android.webkit.DownloadListener;
 import android.webkit.GeolocationPermissions;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
@@ -135,6 +136,19 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 String url = request.getUrl().toString();
+                
+                // Handle special URI schemes (phone, email, sms)
+                if (url.startsWith("tel:") || url.startsWith("mailto:") || url.startsWith("sms:")) {
+                    try {
+                        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+                        startActivity(intent);
+                        return true; // We handled it
+                    } catch (Exception e) {
+                        Toast.makeText(MainActivity.this, "No app found to handle this action", Toast.LENGTH_SHORT).show();
+                        return true;
+                    }
+                }
+
                 if (url.contains("accounts.google.com")) {
                     return false; // Let the WebView handle Google accounts
                 }
@@ -160,6 +174,21 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onReceivedSslError(WebView view, android.webkit.SslErrorHandler handler, android.net.http.SslError error) {
                 handler.proceed();
+            }
+        });
+
+        // Handle File Downloads (Receipts, etc.)
+        webView.setDownloadListener(new DownloadListener() {
+            @Override
+            public void onDownloadStart(String url, String userAgent, String contentDisposition, String mimetype, long contentLength) {
+                try {
+                    Intent intent = new Intent(Intent.ACTION_VIEW);
+                    intent.setData(Uri.parse(url));
+                    startActivity(intent);
+                    Toast.makeText(MainActivity.this, "Downloading file...", Toast.LENGTH_SHORT).show();
+                } catch (Exception e) {
+                    Toast.makeText(MainActivity.this, "Failed to start download", Toast.LENGTH_SHORT).show();
+                }
             }
         });
 
