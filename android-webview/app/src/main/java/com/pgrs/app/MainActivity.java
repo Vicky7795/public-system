@@ -93,7 +93,7 @@ public class MainActivity extends AppCompatActivity {
                 newWebView.setWebViewClient(new WebViewClient() {
                     @Override
                     public boolean shouldOverrideUrlLoading(WebView view, String url) {
-                        if (url.startsWith("tel:") || url.startsWith("mailto:") || url.startsWith("sms:")) {
+                        if (url.startsWith("tel:") || url.startsWith("mailto:") || url.startsWith("sms:") || url.startsWith("whatsapp:")) {
                             try {
                                 Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
                                 startActivity(intent);
@@ -108,7 +108,7 @@ public class MainActivity extends AppCompatActivity {
                     @Override
                     public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                         String url = request.getUrl().toString();
-                        if (url.startsWith("tel:") || url.startsWith("mailto:") || url.startsWith("sms:")) {
+                        if (url.startsWith("tel:") || url.startsWith("mailto:") || url.startsWith("sms:") || url.startsWith("whatsapp:")) {
                             try {
                                 Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
                                 startActivity(intent);
@@ -170,8 +170,8 @@ public class MainActivity extends AppCompatActivity {
             }
 
             private boolean handleSpecialUrls(String url) {
-                // Handle special URI schemes (phone, email, sms)
-                if (url.startsWith("tel:") || url.startsWith("mailto:") || url.startsWith("sms:")) {
+                // Handle special URI schemes (phone, email, sms, whatsapp)
+                if (url.startsWith("tel:") || url.startsWith("mailto:") || url.startsWith("sms:") || url.startsWith("whatsapp:")) {
                     try {
                         Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
                         startActivity(intent);
