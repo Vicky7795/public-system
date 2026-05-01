@@ -93,7 +93,31 @@ public class MainActivity extends AppCompatActivity {
                 newWebView.setWebViewClient(new WebViewClient() {
                     @Override
                     public boolean shouldOverrideUrlLoading(WebView view, String url) {
+                        if (url.startsWith("tel:") || url.startsWith("mailto:") || url.startsWith("sms:")) {
+                            try {
+                                Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+                                startActivity(intent);
+                                return true;
+                            } catch (Exception e) {
+                                return true;
+                            }
+                        }
                         return false; 
+                    }
+
+                    @Override
+                    public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                        String url = request.getUrl().toString();
+                        if (url.startsWith("tel:") || url.startsWith("mailto:") || url.startsWith("sms:")) {
+                            try {
+                                Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+                                startActivity(intent);
+                                return true;
+                            } catch (Exception e) {
+                                return true;
+                            }
+                        }
+                        return false;
                     }
                 });
 
@@ -136,7 +160,16 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 String url = request.getUrl().toString();
-                
+                return handleSpecialUrls(url);
+            }
+
+            @SuppressWarnings("deprecation")
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, String url) {
+                return handleSpecialUrls(url);
+            }
+
+            private boolean handleSpecialUrls(String url) {
                 // Handle special URI schemes (phone, email, sms)
                 if (url.startsWith("tel:") || url.startsWith("mailto:") || url.startsWith("sms:")) {
                     try {
