@@ -252,13 +252,14 @@ router.get('/reverse-geocode', async (req, res) => {
             { 
                 headers: { 
                     'Accept-Language': 'en', 
-                    'User-Agent': 'CitizenGrievancePortal/1.0 (Government-System)' 
-                } 
+                    'User-Agent': 'CitizenGrievancePortal/2.0 (Government-System); contact: nagarevivek206@gmail.com' 
+                },
+                timeout: 8000
             }
         );
 
         if (!geoRes.data || !geoRes.data.address) {
-            throw new Error("No address found for these coordinates.");
+            throw new Error("No address found from Nominatim.");
         }
 
         const a = geoRes.data.address || {};
@@ -288,8 +289,46 @@ router.get('/reverse-geocode', async (req, res) => {
         });
 
     } catch (err) {
-        console.error("[Backend Geocode Proxy] Error:", err.message);
-        res.status(502).json({ message: "Failed to resolve address from coordinate provider." });
+        console.warn(`[Geocode Proxy] Nominatim failed: ${err.message}. Trying Photon fallback...`);
+        
+        try {
+            const photonRes = await axios.get(
+                `https://photon.komoot.io/reverse?lat=${lat}&lon=${lng}`,
+                { timeout: 8000 }
+            );
+
+            if (photonRes.data && photonRes.data.features && photonRes.data.features.length > 0) {
+                const f = photonRes.data.features[0].properties;
+                const addrParts = [
+                    f.name,
+                    f.street,
+                    f.district || f.suburb,
+                    f.city || f.town || f.village,
+                    f.state,
+                    f.postcode,
+                    f.country
+                ].filter(Boolean);
+
+                const address = addrParts.join(', ');
+
+                return res.json({
+                    address,
+                    display_name: address,
+                    provider: 'photon',
+                    structured: {
+                        street: f.street || f.name || '',
+                        area: f.district || f.suburb || '',
+                        city: f.city || f.town || f.village || '',
+                        state: f.state || '',
+                        pincode: f.postcode || ''
+                    }
+                });
+            }
+            throw new Error("No address found from Photon fallback.");
+        } catch (photonErr) {
+            console.error("[Geocode Proxy] All providers failed:", photonErr.message);
+            res.status(502).json({ message: "Failed to resolve address from all coordinate providers." });
+        }
     }
 });
 
@@ -310,25 +349,75 @@ router.get('/geocode-search', async (req, res) => {
     try {
         const searchQuery = q.trim().toLowerCase().includes('india') ? q.trim() : `${q.trim()}, India`;
 
+        console.log(`[Geocode Search] Querying Nominatim for: ${searchQuery}`);
         const searchRes = await axios.get(
             `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(searchQuery)}&countrycodes=in&format=json&limit=8&addressdetails=1`,
             {
                 headers: {
                     'Accept-Language': 'en',
-                    'User-Agent': 'CitizenGrievancePortal/2.0 (Government-System)'
-                }
+                    'User-Agent': 'CitizenGrievancePortal/2.0 (Government-System); contact: nagarevivek206@gmail.com'
+                },
+                timeout: 8000
             }
         );
 
-        const indiaOnly = (searchRes.data || []).filter(r => {
+        if (!Array.isArray(searchRes.data)) {
+            throw new Error("Invalid response format from Nominatim.");
+        }
+
+        const indiaOnly = searchRes.data.filter(r => {
             const country = r.address?.country_code || '';
             return country.toLowerCase() === 'in';
         });
 
         res.json(indiaOnly);
     } catch (err) {
-        console.error('[Geocode Search Proxy] Error:', err.message);
-        res.status(502).json({ message: 'Failed to search location.' });
+        console.warn(`[Geocode Search] Nominatim failed: ${err.message}. Trying Photon fallback...`);
+        
+        try {
+            // Photon fallback
+            const photonRes = await axios.get(
+                `https://photon.komoot.io/api/?q=${encodeURIComponent(q.trim())}&limit=8&lang=en`,
+                { timeout: 8000 }
+            );
+
+            if (photonRes.data && Array.isArray(photonRes.data.features)) {
+                // Map Photon GeoJSON to Nominatim-like format for frontend compatibility
+                const mappedResults = photonRes.data.features
+                    .filter(f => f.properties.countrycode?.toLowerCase() === 'in' || f.properties.country?.toLowerCase() === 'india')
+                    .map(f => {
+                        const p = f.properties;
+                        const addrParts = [
+                            p.name,
+                            p.district || p.suburb,
+                            p.city || p.town || p.village,
+                            p.state,
+                            'India'
+                        ].filter(Boolean);
+                        
+                        return {
+                            place_id: p.osm_id || Math.random(),
+                            lat: f.geometry.coordinates[1].toString(),
+                            lon: f.geometry.coordinates[0].toString(),
+                            display_name: addrParts.join(', '),
+                            address: {
+                                road: p.street || '',
+                                suburb: p.district || p.suburb || '',
+                                city: p.city || p.town || p.village || '',
+                                state: p.state || '',
+                                postcode: p.postcode || '',
+                                country_code: 'in'
+                            }
+                        };
+                    });
+                
+                return res.json(mappedResults);
+            }
+            throw new Error("No results from Photon fallback.");
+        } catch (photonErr) {
+            console.error('[Geocode Search] All providers failed:', photonErr.message);
+            res.status(502).json({ message: 'Failed to search location via all providers.' });
+        }
     }
 });
 
